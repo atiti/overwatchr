@@ -135,6 +135,72 @@ public enum TerminalApplication: Equatable, Sendable {
         }
     }
 
+    public func appleScriptWindowFocusCommand(matchingTTY tty: String) -> String? {
+        let escapedTTY = tty
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+
+        switch self {
+        case .ghostty:
+            return nil
+        case .iTerm:
+            return """
+            tell application "iTerm2"
+                activate
+                set query to "\(escapedTTY)"
+                repeat with aWindow in windows
+                    repeat with aTab in tabs of aWindow
+                        repeat with aSession in sessions of aTab
+                            set sessionTTY to ""
+                            try
+                                set sessionTTY to (tty of aSession as text)
+                            on error
+                                set sessionTTY to ""
+                            end try
+                            if sessionTTY is query then
+                                tell aWindow
+                                    set current tab to aTab
+                                    set index to 1
+                                end tell
+                                try
+                                    select aSession
+                                end try
+                                return "matched"
+                            end if
+                        end repeat
+                    end repeat
+                end repeat
+                return ""
+            end tell
+            """
+        case .terminal:
+            return """
+            tell application "Terminal"
+                activate
+                set query to "\(escapedTTY)"
+                repeat with aWindow in windows
+                    repeat with aTab in tabs of aWindow
+                        set tabTTY to ""
+                        try
+                            set tabTTY to (tty of aTab as text)
+                        on error
+                            set tabTTY to ""
+                        end try
+                        if tabTTY is query then
+                            set selected tab of aWindow to aTab
+                            set index of aWindow to 1
+                            return "matched"
+                        end if
+                    end repeat
+                end repeat
+                return ""
+            end tell
+            """
+        case .other:
+            return nil
+        }
+    }
+
     public func appleScriptWindowFocusCommand(matching title: String) -> String? {
         let escapedTitle = title
             .replacingOccurrences(of: "\\", with: "\\\\")

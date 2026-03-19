@@ -119,7 +119,7 @@ You usually do not call these by hand. The generated hook configs call them for 
 - iTerm
 - Terminal.app
 
-Ghostty uses both Accessibility window matching and a native `Window` menu fallback so tab switching is reliable even when AX window titles are not.
+Overwatchr now prefers exact `tty` session matching for iTerm and Terminal.app when the hook process can see a controlling terminal, then falls back to title matching. Ghostty still uses Accessibility window matching plus the `Window` menu fallback because its scripting surface is more limited.
 
 ## Development
 

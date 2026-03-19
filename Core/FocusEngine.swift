@@ -28,10 +28,12 @@ public enum FocusError: Error, LocalizedError {
 
 public struct FocusTarget: Sendable {
     public let terminalName: String
+    public let ttyPath: String?
     public let titleSubstring: String?
 
-    public init(terminalName: String, titleSubstring: String?) {
+    public init(terminalName: String, ttyPath: String?, titleSubstring: String?) {
         self.terminalName = terminalName
+        self.ttyPath = ttyPath?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.titleSubstring = titleSubstring?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
@@ -45,7 +47,7 @@ public final class FocusEngine {
             throw FocusError.missingTerminal
         }
 
-        try focus(target: FocusTarget(terminalName: terminal, titleSubstring: event.title))
+        try focus(target: FocusTarget(terminalName: terminal, ttyPath: event.tty, titleSubstring: event.title))
     }
 
     public func focus(target: FocusTarget) throws {
@@ -56,6 +58,10 @@ public final class FocusEngine {
         }
 
         app.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+
+        if let tty = target.ttyPath, !tty.isEmpty, runTTYMatchAppleScript(for: terminal, tty: tty) {
+            return
+        }
 
         if let title = target.titleSubstring, !title.isEmpty {
             if terminal == .ghostty, runTitleMatchAppleScript(for: terminal, title: title) {
@@ -131,6 +137,15 @@ public final class FocusEngine {
         }
 
         return false
+    }
+
+    private func runTTYMatchAppleScript(for terminal: TerminalApplication, tty: String) -> Bool {
+        guard let scriptSource = terminal.appleScriptWindowFocusCommand(matchingTTY: tty),
+              let output = executeAppleScript(scriptSource)?.stringValue else {
+            return false
+        }
+
+        return output == "matched"
     }
 
     private func windowCandidateStrings(for window: AXUIElement) -> [String] {

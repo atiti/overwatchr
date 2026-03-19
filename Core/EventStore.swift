@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public enum EventStoreError: Error, LocalizedError {
     case invalidEncoding
@@ -23,11 +24,21 @@ public struct EventStore: Sendable {
     public static let defaultDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".overwatchr", isDirectory: true)
     public static let defaultFileURL = defaultDirectoryURL.appendingPathComponent("events.jsonl")
+    public static let environmentOverrideKey = "OVERWATCHR_EVENTS_FILE"
 
     public let fileURL: URL
 
-    public init(fileURL: URL = EventStore.defaultFileURL) {
-        self.fileURL = fileURL
+    public init(
+        fileURL: URL? = nil,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
+        if let fileURL {
+            self.fileURL = fileURL
+        } else if let override = environment[EventStore.environmentOverrideKey], !override.isEmpty {
+            self.fileURL = URL(fileURLWithPath: override)
+        } else {
+            self.fileURL = EventStore.defaultFileURL
+        }
     }
 
     public func ensureStorage() throws {
@@ -43,17 +54,44 @@ public struct EventStore: Sendable {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let encoded = try encoder.encode(event)
-
+        var line = try encoder.encode(event)
         guard let lineBreak = "\n".data(using: .utf8) else {
             throw EventStoreError.invalidEncoding
         }
+        line.append(lineBreak)
 
-        let handle = try FileHandle(forWritingTo: fileURL)
-        defer { try? handle.close() }
-        try handle.seekToEnd()
-        try handle.write(contentsOf: encoded)
-        try handle.write(contentsOf: lineBreak)
+        let descriptor = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+        guard descriptor >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        defer {
+            _ = flock(descriptor, LOCK_UN)
+            close(descriptor)
+        }
+
+        guard flock(descriptor, LOCK_EX) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        try line.withUnsafeBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else {
+                return
+            }
+
+            var bytesRemaining = buffer.count
+            var offset = 0
+
+            while bytesRemaining > 0 {
+                let written = write(descriptor, baseAddress.advanced(by: offset), bytesRemaining)
+                if written < 0 {
+                    throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                }
+
+                bytesRemaining -= written
+                offset += written
+            }
+        }
     }
 
     public func loadAll() throws -> [AgentEvent] {

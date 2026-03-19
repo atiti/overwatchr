@@ -411,6 +411,11 @@ private struct AlertRow: View {
     private var metadataRow: some View {
         HStack(spacing: 10) {
             Label(terminalLabel, systemImage: "terminal")
+            if let tty = alert.tty {
+                Text(tty)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
             Text(timestampLabel)
             Spacer(minLength: 0)
         }

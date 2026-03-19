@@ -31,6 +31,7 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
     public let project: String?
     public let status: AgentStatus
     public let terminal: String?
+    public let tty: String?
     public let title: String?
     public let timestamp: TimeInterval
 
@@ -39,6 +40,7 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
         project: String? = nil,
         status: AgentStatus,
         terminal: String? = nil,
+        tty: String? = nil,
         title: String? = nil,
         timestamp: TimeInterval = Date().timeIntervalSince1970
     ) {
@@ -46,6 +48,7 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
         self.project = project?.nilIfBlank
         self.status = status
         self.terminal = terminal?.nilIfBlank
+        self.tty = tty?.nilIfBlank
         self.title = title?.nilIfBlank
         self.timestamp = timestamp
     }
@@ -76,6 +79,7 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
         case project
         case status
         case terminal
+        case tty
         case title
         case timestamp
     }
@@ -87,4 +91,3 @@ private extension String {
         return trimmed.isEmpty ? nil : trimmed
     }
 }
-

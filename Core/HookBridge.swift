@@ -56,17 +56,20 @@ public struct HookBridgeInput: Sendable {
     public let payload: [String: JSONValue]
     public let environment: [String: String]
     public let currentDirectoryPath: String
+    public let ttyPath: String?
 
     public init(
         tool: HookBridgeTool,
         payload: [String: JSONValue],
         environment: [String: String] = ProcessInfo.processInfo.environment,
-        currentDirectoryPath: String = FileManager.default.currentDirectoryPath
+        currentDirectoryPath: String = FileManager.default.currentDirectoryPath,
+        ttyPath: String? = nil
     ) {
         self.tool = tool
         self.payload = payload
         self.environment = environment
         self.currentDirectoryPath = currentDirectoryPath
+        self.ttyPath = (ttyPath ?? ControllingTTY.current())?.nilIfBlank
     }
 }
 
@@ -93,6 +96,7 @@ public enum HookBridge {
                 project: inferredProject(from: input),
                 status: .needsInput,
                 terminal: inferredTerminal(from: input),
+                tty: inferredTTY(from: input),
                 title: inferredTitle(from: input),
                 timestamp: input.double("timestamp") ?? Date().timeIntervalSince1970
             )
@@ -110,6 +114,7 @@ public enum HookBridge {
                     project: inferredProject(from: input),
                     status: .done,
                     terminal: inferredTerminal(from: input),
+                    tty: inferredTTY(from: input),
                     title: inferredTitle(from: input),
                     timestamp: input.double("timestamp") ?? Date().timeIntervalSince1970
                 )
@@ -126,6 +131,7 @@ public enum HookBridge {
                     project: inferredProject(from: input),
                     status: .needsInput,
                     terminal: inferredTerminal(from: input),
+                    tty: inferredTTY(from: input),
                     title: inferredTitle(from: input),
                     timestamp: input.double("timestamp") ?? Date().timeIntervalSince1970
                 )
@@ -148,6 +154,7 @@ public enum HookBridge {
                     project: inferredProject(from: input),
                     status: .needsInput,
                     terminal: inferredTerminal(from: input),
+                    tty: inferredTTY(from: input),
                     title: inferredTitle(from: input),
                     timestamp: input.double("timestamp") ?? Date().timeIntervalSince1970
                 )
@@ -159,6 +166,7 @@ public enum HookBridge {
                     project: inferredProject(from: input),
                     status: .done,
                     terminal: inferredTerminal(from: input),
+                    tty: inferredTTY(from: input),
                     title: inferredTitle(from: input),
                     timestamp: input.double("timestamp") ?? Date().timeIntervalSince1970
                 )
@@ -201,6 +209,13 @@ public enum HookBridge {
         default:
             return nil
         }
+    }
+
+    private static func inferredTTY(from input: HookBridgeInput) -> String? {
+        input.environment["OVERWATCHR_TTY"]?.nilIfBlank
+            ?? input.string("tty")
+            ?? input.string("terminal.tty")
+            ?? input.ttyPath
     }
 
     private static func namespacedAgentID(tool: HookBridgeTool, rawID: String?) -> String {

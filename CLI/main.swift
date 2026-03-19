@@ -103,6 +103,7 @@ struct OverwatchrCLI {
             project: parsed.options["project"],
             status: status,
             terminal: parsed.options["terminal"],
+            tty: parsed.options["tty"],
             title: parsed.options["title"],
             timestamp: parsed.options["timestamp"].flatMap(TimeInterval.init) ?? Date().timeIntervalSince1970
         )
@@ -185,14 +186,14 @@ struct OverwatchrCLI {
 
     private static let usage = """
     Usage:
-      overwatchr alert --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--title TITLE]
+      overwatchr alert --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--tty TTY] [--title TITLE]
       overwatchr done --agent AGENT [--project PROJECT]
-      overwatchr error --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--title TITLE]
+      overwatchr error --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--tty TTY] [--title TITLE]
       overwatchr hooks install <codex|claude|opencode|all> [--scope project|user] [--dir PATH]
       overwatchr hook-run <codex|claude|opencode>
 
     Examples:
-      overwatchr alert --agent copy --project landing --terminal ghostty --title "landing:copy"
+      overwatchr alert --agent copy --project landing --terminal ghostty --tty /dev/ttys012 --title "landing:copy"
       overwatchr hooks install codex --scope project
       overwatchr hooks install all --scope user
     """
