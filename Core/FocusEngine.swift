@@ -1,0 +1,200 @@
+#if os(macOS)
+import AppKit
+import ApplicationServices
+import Foundation
+
+public enum FocusError: Error, LocalizedError {
+    case missingTerminal
+    case applicationNotRunning(String)
+    case accessibilityPermissionRequired
+    case windowNotFound(String)
+    case activationFailed(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .missingTerminal:
+            return "This alert does not include terminal metadata."
+        case .applicationNotRunning(let name):
+            return "\(name) is not running."
+        case .accessibilityPermissionRequired:
+            return "Accessibility access is required to focus the matching terminal window."
+        case .windowNotFound(let title):
+            return "No matching terminal window was found for: \(title)"
+        case .activationFailed(let message):
+            return message
+        }
+    }
+}
+
+public struct FocusTarget: Sendable {
+    public let terminalName: String
+    public let titleSubstring: String?
+
+    public init(terminalName: String, titleSubstring: String?) {
+        self.terminalName = terminalName
+        self.titleSubstring = titleSubstring?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+@MainActor
+public final class FocusEngine {
+    public init() {}
+
+    public func focus(event: AgentEvent) throws {
+        guard let terminal = event.terminal else {
+            throw FocusError.missingTerminal
+        }
+
+        try focus(target: FocusTarget(terminalName: terminal, titleSubstring: event.title))
+    }
+
+    public func focus(target: FocusTarget) throws {
+        let terminal = TerminalApplication(name: target.terminalName)
+
+        guard let app = findRunningApplication(for: terminal) else {
+            throw FocusError.applicationNotRunning(terminal.displayName)
+        }
+
+        app.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+
+        if let title = target.titleSubstring, !title.isEmpty {
+            let focused = try focusWindow(of: app, matching: title)
+            if focused {
+                return
+            }
+
+            if runTitleMatchAppleScript(for: terminal, title: title) {
+                return
+            }
+        }
+
+        if runAppleScriptActivation(for: terminal) {
+            return
+        }
+
+        if target.titleSubstring != nil {
+            throw FocusError.windowNotFound(target.titleSubstring ?? terminal.displayName)
+        }
+    }
+
+    private func findRunningApplication(for terminal: TerminalApplication) -> NSRunningApplication? {
+        let workspace = NSWorkspace.shared
+        let runningApps = workspace.runningApplications
+
+        if let app = runningApps.first(where: { running in
+            guard let bundleIdentifier = running.bundleIdentifier else {
+                return false
+            }
+            return terminal.bundleIdentifiers.contains(bundleIdentifier)
+        }) {
+            return app
+        }
+
+        return runningApps.first(where: { running in
+            guard let localizedName = running.localizedName else {
+                return false
+            }
+            return terminal.candidateNames.contains { candidate in
+                localizedName.caseInsensitiveCompare(candidate) == .orderedSame
+            }
+        })
+    }
+
+    private func focusWindow(of application: NSRunningApplication, matching title: String) throws -> Bool {
+        guard AXIsProcessTrusted() else {
+            throw FocusError.accessibilityPermissionRequired
+        }
+
+        let appElement = AXUIElementCreateApplication(application.processIdentifier)
+        let windows = copyWindows(from: appElement)
+
+        let scoredWindows: [(window: AXUIElement, score: Int)] = windows.compactMap { window in
+            let candidates = windowCandidateStrings(for: window)
+            let score = candidates
+                .compactMap { WindowTitleMatcher.score(candidate: $0, query: title) }
+                .max()
+
+            guard let score else {
+                return nil
+            }
+
+            return (window, score)
+        }
+
+        if let bestWindow = scoredWindows.max(by: { lhs, rhs in lhs.score < rhs.score })?.window {
+            raise(window: bestWindow)
+            return true
+        }
+
+        return false
+    }
+
+    private func windowCandidateStrings(for window: AXUIElement) -> [String] {
+        [
+            copyStringAttribute(kAXTitleAttribute as CFString, from: window),
+            copyStringAttribute(kAXDocumentAttribute as CFString, from: window)
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    }
+
+    private func raise(window: AXUIElement) {
+        _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+        AXUIElementSetAttributeValue(window, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+    }
+
+    private func copyWindows(from element: AXUIElement) -> [AXUIElement] {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &value)
+        guard result == .success, let array = value as? [AXUIElement] else {
+            return []
+        }
+        return array
+    }
+
+    private func copyStringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
+        guard result == .success else {
+            return nil
+        }
+        return value as? String
+    }
+
+    private func runAppleScriptActivation(for terminal: TerminalApplication) -> Bool {
+        for command in terminal.appleScriptActivationCommands {
+            if executeAppleScript(command) != nil {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private func runTitleMatchAppleScript(for terminal: TerminalApplication, title: String) -> Bool {
+        guard let scriptSource = terminal.appleScriptWindowFocusCommand(matching: title) else {
+            return false
+        }
+
+        guard let output = executeAppleScript(scriptSource)?.stringValue else {
+            return false
+        }
+
+        return output == "matched"
+    }
+
+    private func executeAppleScript(_ source: String) -> NSAppleEventDescriptor? {
+        guard let script = NSAppleScript(source: source) else {
+            return nil
+        }
+
+        var error: NSDictionary?
+        let result = script.executeAndReturnError(&error)
+        if error != nil {
+            return nil
+        }
+        return result
+    }
+}
+#endif
