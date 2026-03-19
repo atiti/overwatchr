@@ -19,6 +19,7 @@ fi
 
 APP_BINARY="$ROOT_DIR/.build/${BUILD_CONFIGURATION}/overwatchr-app"
 CLI_BINARY="$ROOT_DIR/.build/${BUILD_CONFIGURATION}/overwatchr"
+RESOURCE_BUNDLE="$(find "$ROOT_DIR/.build" -path "*/${BUILD_CONFIGURATION}/overwatchr_OverwatchrApp.bundle" -print -quit)"
 ICONSET_SOURCE="$ROOT_DIR/Assets/overwatchr.iconset"
 MASTER_ICON="$DIST_DIR/AppIcon-1024.png"
 ICONSET_DIR="$(mktemp -d /tmp/overwatchr-icon.XXXXXX).iconset"
@@ -41,6 +42,13 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 
 install -m 755 "$APP_BINARY" "$APP_BUNDLE/Contents/MacOS/overwatchr-app"
+if [[ -n "$RESOURCE_BUNDLE" && -d "$RESOURCE_BUNDLE" ]]; then
+  cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/"
+else
+  echo "Missing SwiftPM resource bundle for Overwatchr.app" >&2
+  exit 1
+fi
+
 iconutil -c icns "$ICONSET_DIR" -o "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
