@@ -69,7 +69,7 @@ public struct HookBridgeInput: Sendable {
         self.payload = payload
         self.environment = environment
         self.currentDirectoryPath = currentDirectoryPath
-        self.ttyPath = (ttyPath ?? ControllingTTY.current())?.nilIfBlank
+        self.ttyPath = (ttyPath ?? ControllingTTY.current())?.sanitizedTTYPath
     }
 }
 
@@ -212,10 +212,10 @@ public enum HookBridge {
     }
 
     private static func inferredTTY(from input: HookBridgeInput) -> String? {
-        input.environment["OVERWATCHR_TTY"]?.nilIfBlank
-            ?? input.string("tty")
-            ?? input.string("terminal.tty")
-            ?? input.ttyPath
+        input.environment["OVERWATCHR_TTY"]?.sanitizedTTYPath
+            ?? input.string("tty")?.sanitizedTTYPath
+            ?? input.string("terminal.tty")?.sanitizedTTYPath
+            ?? input.ttyPath?.sanitizedTTYPath
     }
 
     private static func namespacedAgentID(tool: HookBridgeTool, rawID: String?) -> String {
@@ -304,5 +304,12 @@ private extension String {
     var nilIfBlank: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    var sanitizedTTYPath: String? {
+        guard let trimmed = nilIfBlank, trimmed != "/dev/tty" else {
+            return nil
+        }
+        return trimmed
     }
 }

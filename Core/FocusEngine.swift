@@ -47,10 +47,21 @@ public final class FocusEngine {
             throw FocusError.missingTerminal
         }
 
-        try focus(target: FocusTarget(terminalName: terminal, ttyPath: event.tty, titleSubstring: event.title))
+        try focus(
+            target: FocusTarget(
+                terminalName: terminal,
+                ttyPath: event.tty,
+                titleSubstring: FocusHintResolver.queries(for: event).first
+            ),
+            titleQueries: FocusHintResolver.queries(for: event)
+        )
     }
 
     public func focus(target: FocusTarget) throws {
+        try focus(target: target, titleQueries: [target.titleSubstring].compactMap { $0 })
+    }
+
+    private func focus(target: FocusTarget, titleQueries: [String]) throws {
         let terminal = TerminalApplication(name: target.terminalName)
 
         guard let app = findRunningApplication(for: terminal) else {
@@ -63,7 +74,7 @@ public final class FocusEngine {
             return
         }
 
-        if let title = target.titleSubstring, !title.isEmpty {
+        for title in titleQueries where !title.isEmpty {
             if terminal == .ghostty, runTitleMatchAppleScript(for: terminal, title: title) {
                 return
             }
@@ -82,8 +93,8 @@ public final class FocusEngine {
             return
         }
 
-        if target.titleSubstring != nil {
-            throw FocusError.windowNotFound(target.titleSubstring ?? terminal.displayName)
+        if let title = titleQueries.first {
+            throw FocusError.windowNotFound(title)
         }
     }
 
@@ -196,7 +207,10 @@ public final class FocusEngine {
            let scriptSource = terminal.appleScriptSelectWindowMenuItemCommand(title: matchedMenuItem),
            let output = executeAppleScript(scriptSource)?.stringValue,
            output == "matched" {
-            return true
+            return terminal != .ghostty || frontWindowTitle(for: terminal).map {
+                WindowTitleMatcher.score(candidate: $0, query: matchedMenuItem) != nil
+                    || WindowTitleMatcher.score(candidate: $0, query: title) != nil
+            } == true
         }
 
         guard let scriptSource = terminal.appleScriptWindowFocusCommand(matching: title) else {
@@ -234,6 +248,16 @@ public final class FocusEngine {
 
         return (1...descriptor.numberOfItems)
             .compactMap { descriptor.atIndex($0)?.stringValue }
+    }
+
+    private func frontWindowTitle(for terminal: TerminalApplication) -> String? {
+        guard let scriptSource = terminal.appleScriptFrontWindowTitleCommand else {
+            return nil
+        }
+
+        return executeAppleScript(scriptSource)?
+            .stringValue?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func executeAppleScript(_ source: String) -> NSAppleEventDescriptor? {

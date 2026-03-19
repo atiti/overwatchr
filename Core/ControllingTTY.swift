@@ -26,7 +26,11 @@ enum ControllingTTY {
         guard let pointer = ttyname(fileDescriptor) else {
             return nil
         }
-        return String(cString: pointer).trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
+        let path = String(cString: pointer).trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
+        guard path != "/dev/tty" else {
+            return nil
+        }
+        return path
     }
 }
 

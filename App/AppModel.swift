@@ -25,6 +25,7 @@ final class AppModel: ObservableObject {
     private var hasStarted = false
     private var currentAlerts: [AgentEvent] = []
     private var seenLedger: SeenAlertLedger
+    private var temporarilySkippedAgentIDs: Set<String> = []
     private lazy var watcher = EventWatcher(store: store) { [weak self] update in
         self?.applyAlertUpdate(update.currentAlerts, newEvents: update.newEvents)
     }
@@ -67,9 +68,14 @@ final class AppModel: ObservableObject {
 
     func focusNextAlert() {
         refreshAccessibilityStatus()
-        let pendingAlerts = alerts
-        guard !pendingAlerts.isEmpty else {
+        guard !alerts.isEmpty else {
             return
+        }
+
+        var pendingAlerts = alerts.filter { !temporarilySkippedAgentIDs.contains($0.agentID) }
+        if pendingAlerts.isEmpty {
+            temporarilySkippedAgentIDs.removeAll()
+            pendingAlerts = alerts
         }
 
         var skippedCount = 0
@@ -78,13 +84,14 @@ final class AppModel: ObservableObject {
         for alert in pendingAlerts {
             do {
                 try focusEngine.focus(event: alert)
+                temporarilySkippedAgentIDs.removeAll()
                 markSeen(alert)
                 playJumpSoundIfEnabled()
                 refreshAccessibilityStatus()
                 lastErrorMessage = skippedCount == 0 ? nil : "Skipped \(skippedCount) stale alert\(skippedCount == 1 ? "" : "s") before jumping."
                 return
             } catch {
-                markSeen(alert)
+                temporarilySkippedAgentIDs.insert(alert.agentID)
                 skippedCount += 1
                 lastError = error.localizedDescription
             }
@@ -161,6 +168,7 @@ final class AppModel: ObservableObject {
         refreshAccessibilityStatus()
         self.currentAlerts = currentAlerts
         alerts = seenLedger.visibleAlerts(from: currentAlerts)
+        temporarilySkippedAgentIDs.formIntersection(Set(alerts.map(\.agentID)))
         lastUpdatedAt = Date()
 
         let incomingAttention = newEvents.filter(\.status.requiresAttention)

@@ -110,6 +110,33 @@ public enum TerminalApplication: Equatable, Sendable {
         }
     }
 
+    public var appleScriptFrontWindowTitleCommand: String? {
+        let processName: String
+
+        switch self {
+        case .ghostty:
+            processName = "Ghostty"
+        case .iTerm:
+            processName = "iTerm2"
+        case .terminal:
+            processName = "Terminal"
+        case .other(let name):
+            processName = name
+        }
+
+        let escapedProcessName = processName
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+
+        return """
+        tell application "System Events"
+            tell process "\(escapedProcessName)"
+                get name of front window
+            end tell
+        end tell
+        """
+    }
+
     public func appleScriptSelectWindowMenuItemCommand(title: String) -> String? {
         let escapedTitle = title
             .replacingOccurrences(of: "\\", with: "\\\\")

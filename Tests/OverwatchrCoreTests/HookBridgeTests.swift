@@ -104,4 +104,24 @@ final class HookBridgeTests: XCTestCase {
         XCTAssertEqual(event.terminal, "iTerm2")
         XCTAssertEqual(event.tty, "/dev/ttys099")
     }
+
+    func testPseudoTTYPathIsDropped() {
+        let input = HookBridgeInput(
+            tool: .codex,
+            payload: [
+                "cwd": .string("/tmp/landing"),
+                "session_id": .string("sess-123"),
+                "stop_hook_active": .bool(false)
+            ],
+            environment: ["TERM_PROGRAM": "ghostty"],
+            currentDirectoryPath: "/tmp/landing",
+            ttyPath: "/dev/tty"
+        )
+
+        guard case .emit(let event) = HookBridge.action(for: input) else {
+            return XCTFail("Expected an emitted event")
+        }
+
+        XCTAssertNil(event.tty)
+    }
 }
