@@ -76,7 +76,8 @@ public struct ShellIntegrationInstaller {
             snippetFile: snippetURL,
             notes: [
                 "Interactive \(shell.rawValue) shells will export OVERWATCHR_TITLE from the current directory name.",
-                "Ghostty sessions launched through `codex` will keep that title pinned while Codex is running."
+                "The shell will also emit the same title through the standard OSC title escape sequence.",
+                "On Ghostty 1.3.1+, the focused tab title is updated through AppleScript for more reliable session targeting."
             ]
         )
     }
@@ -159,12 +160,35 @@ private extension ShellProfile {
               fi
             }
 
+            _overwatchr_sync_ghostty_tab_title() {
+              local title="$1"
+              if [ "${TERM_PROGRAM:-}" != "ghostty" ] || [ -z "$title" ]; then
+                return 0
+              fi
+              if [ "${_OVERWATCHR_LAST_GHOSTTY_TAB_TITLE:-}" = "$title" ]; then
+                return 0
+              fi
+
+              OVERWATCHR_GHOSTTY_TITLE="$title" osascript >/dev/null 2>&1 <<'APPLESCRIPT'
+            set desiredTitle to system attribute "OVERWATCHR_GHOSTTY_TITLE"
+            tell application "Ghostty"
+              if not frontmost then return
+              perform action ("set_tab_title:" & desiredTitle) on focused terminal of selected tab of front window
+            end tell
+            APPLESCRIPT
+
+              if [ $? -eq 0 ]; then
+                export _OVERWATCHR_LAST_GHOSTTY_TAB_TITLE="$title"
+              fi
+            }
+
             _overwatchr_shell_title() {
               local title
               title="$(_overwatchr_compute_title)"
               if [ -n "$title" ]; then
                 export OVERWATCHR_TITLE="$title"
                 _overwatchr_write_title "$title"
+                _overwatchr_sync_ghostty_tab_title "$title"
               fi
             }
 
@@ -178,36 +202,6 @@ private extension ShellProfile {
             fi
 
             _overwatchr_shell_title
-
-            codex() {
-              local title keeper_pid exit_code
-              title="$(_overwatchr_compute_title)"
-              if [ -n "$title" ]; then
-                export OVERWATCHR_TITLE="$title"
-              fi
-
-              if [ "${TERM_PROGRAM:-}" = "ghostty" ] && [ -z "${OVERWATCHR_DISABLE_CODEX_TITLE_KEEPALIVE:-}" ]; then
-                _overwatchr_write_title "$title"
-                (
-                  while true; do
-                    _overwatchr_write_title "$title" > /dev/tty 2>/dev/null || break
-                    sleep 1
-                  done
-                ) &
-                keeper_pid=$!
-              fi
-
-              command codex "$@"
-              exit_code=$?
-
-              if [ -n "${keeper_pid:-}" ]; then
-                kill "$keeper_pid" >/dev/null 2>&1 || true
-                wait "$keeper_pid" 2>/dev/null || true
-              fi
-
-              _overwatchr_shell_title
-              return $exit_code
-            }
             """
         case .bash:
             return """
@@ -228,12 +222,35 @@ private extension ShellProfile {
               fi
             }
 
+            _overwatchr_sync_ghostty_tab_title() {
+              local title="$1"
+              if [ "${TERM_PROGRAM:-}" != "ghostty" ] || [ -z "$title" ]; then
+                return 0
+              fi
+              if [ "${_OVERWATCHR_LAST_GHOSTTY_TAB_TITLE:-}" = "$title" ]; then
+                return 0
+              fi
+
+              OVERWATCHR_GHOSTTY_TITLE="$title" osascript >/dev/null 2>&1 <<'APPLESCRIPT'
+            set desiredTitle to system attribute "OVERWATCHR_GHOSTTY_TITLE"
+            tell application "Ghostty"
+              if not frontmost then return
+              perform action ("set_tab_title:" & desiredTitle) on focused terminal of selected tab of front window
+            end tell
+            APPLESCRIPT
+
+              if [ $? -eq 0 ]; then
+                export _OVERWATCHR_LAST_GHOSTTY_TAB_TITLE="$title"
+              fi
+            }
+
             _overwatchr_shell_title() {
               local title
               title="$(_overwatchr_compute_title)"
               if [ -n "$title" ]; then
                 export OVERWATCHR_TITLE="$title"
                 _overwatchr_write_title "$title"
+                _overwatchr_sync_ghostty_tab_title "$title"
               fi
             }
 
@@ -243,36 +260,6 @@ private extension ShellProfile {
             esac
 
             _overwatchr_shell_title
-
-            codex() {
-              local title keeper_pid exit_code
-              title="$(_overwatchr_compute_title)"
-              if [ -n "$title" ]; then
-                export OVERWATCHR_TITLE="$title"
-              fi
-
-              if [ "${TERM_PROGRAM:-}" = "ghostty" ] && [ -z "${OVERWATCHR_DISABLE_CODEX_TITLE_KEEPALIVE:-}" ]; then
-                _overwatchr_write_title "$title"
-                (
-                  while true; do
-                    _overwatchr_write_title "$title" > /dev/tty 2>/dev/null || break
-                    sleep 1
-                  done
-                ) &
-                keeper_pid=$!
-              fi
-
-              command codex "$@"
-              exit_code=$?
-
-              if [ -n "${keeper_pid:-}" ]; then
-                kill "$keeper_pid" >/dev/null 2>&1 || true
-                wait "$keeper_pid" 2>/dev/null || true
-              fi
-
-              _overwatchr_shell_title
-              return $exit_code
-            }
             """
         }
     }
