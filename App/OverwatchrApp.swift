@@ -167,8 +167,8 @@ private struct StatusMenuView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let lastErrorMessage = model.lastErrorMessage {
-                Text(lastErrorMessage)
+            if let feedbackMessage = model.feedbackMessage {
+                Text(feedbackMessage)
                     .font(.system(size: 11))
                     .foregroundStyle(Color.white.opacity(0.72))
                     .padding(.top, 2)

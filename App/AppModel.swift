@@ -8,7 +8,7 @@ import ServiceManagement
 @MainActor
 final class AppModel: ObservableObject {
     @Published private(set) var alerts: [AgentEvent] = []
-    @Published var lastErrorMessage: String?
+    @Published var feedbackMessage: String?
     @Published private(set) var accessibilityTrusted = AXIsProcessTrusted()
     @Published private(set) var lastUpdatedAt = Date()
     @Published private(set) var launchAtLoginEnabled = false
@@ -65,7 +65,7 @@ final class AppModel: ObservableObject {
                 self?.focusNextAlert()
             }
         } catch {
-            lastErrorMessage = error.localizedDescription
+            feedbackMessage = error.localizedDescription
         }
     }
 
@@ -91,7 +91,7 @@ final class AppModel: ObservableObject {
                 markSeen(alert)
                 playJumpSoundIfEnabled()
                 refreshAccessibilityStatus()
-                lastErrorMessage = skippedCount == 0 ? nil : "Skipped \(skippedCount) stale alert\(skippedCount == 1 ? "" : "s") before jumping."
+                feedbackMessage = focusSuccessMessage(for: alert, skippedCount: skippedCount)
                 return
             } catch {
                 temporarilySkippedAgentIDs.insert(alert.agentID)
@@ -102,7 +102,7 @@ final class AppModel: ObservableObject {
 
         refreshAccessibilityStatus()
         if let lastError {
-            lastErrorMessage = "Skipped \(skippedCount) alert\(skippedCount == 1 ? "" : "s"), but none could be focused. Last issue: \(lastError)"
+            feedbackMessage = "Skipped \(skippedCount) alert\(skippedCount == 1 ? "" : "s"), but none could be focused. Last issue: \(lastError)"
         }
     }
 
@@ -113,9 +113,9 @@ final class AppModel: ObservableObject {
             markSeen(event)
             playJumpSoundIfEnabled()
             refreshAccessibilityStatus()
-            lastErrorMessage = nil
+            feedbackMessage = focusSuccessMessage(for: event)
         } catch {
-            lastErrorMessage = error.localizedDescription
+            feedbackMessage = error.localizedDescription
             refreshAccessibilityStatus()
         }
     }
@@ -164,12 +164,12 @@ final class AppModel: ObservableObject {
         seenLedger.markSeen(alerts)
         alerts = seenLedger.visibleAlerts(from: currentAlerts)
         temporarilySkippedAgentIDs.removeAll()
-        lastErrorMessage = "Cleared \(clearedCount) alert\(clearedCount == 1 ? "" : "s") from the queue."
+        feedbackMessage = "Cleared \(clearedCount) alert\(clearedCount == 1 ? "" : "s") from the queue."
 
         do {
             try seenStore.save(seenLedger)
         } catch {
-            lastErrorMessage = "Cleared the queue, but could not save seen-state: \(error.localizedDescription)"
+            feedbackMessage = "Cleared the queue, but could not save seen-state: \(error.localizedDescription)"
         }
     }
 
@@ -226,8 +226,24 @@ final class AppModel: ObservableObject {
         do {
             try seenStore.save(seenLedger)
         } catch {
-            lastErrorMessage = "\(prefix): \(error.localizedDescription)"
+            feedbackMessage = "\(prefix): \(error.localizedDescription)"
         }
+    }
+
+    private func focusSuccessMessage(for event: AgentEvent, skippedCount: Int = 0) -> String {
+        let target = event.project ?? event.title ?? event.agentID
+        let suffix: String
+        if alerts.isEmpty {
+            suffix = " Queue clear."
+        } else {
+            suffix = " \(alerts.count) left."
+        }
+
+        if skippedCount > 0 {
+            return "Jumped to \(target), marked it seen, and skipped \(skippedCount) stale alert\(skippedCount == 1 ? "" : "s").\(suffix)"
+        }
+
+        return "Jumped to \(target) and marked it seen.\(suffix)"
     }
 }
 #endif
