@@ -17,6 +17,7 @@ final class ShellIntegrationInstallerTests: XCTestCase {
         XCTAssertTrue(rcContents.contains(#"source "$HOME/.config/overwatchr/shell.zsh""#))
         XCTAssertTrue(snippetContents.contains("export OVERWATCHR_TITLE=\"$title\""))
         XCTAssertTrue(snippetContents.contains(#"printf '\033]0;%s\007' "$title""#))
+        XCTAssertTrue(snippetContents.contains("codex() {"))
     }
 
     func testInstallDoesNotDuplicateSourceLine() throws {

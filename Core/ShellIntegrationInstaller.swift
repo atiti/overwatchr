@@ -76,7 +76,7 @@ public struct ShellIntegrationInstaller {
             snippetFile: snippetURL,
             notes: [
                 "Interactive \(shell.rawValue) shells will export OVERWATCHR_TITLE from the current directory name.",
-                "Ghostty tabs will use the same title, so Overwatchr can jump back to the correct session more reliably."
+                "Ghostty sessions launched through `codex` will keep that title pinned while Codex is running."
             ]
         )
     }
@@ -148,12 +148,23 @@ private extension ShellProfile {
             fi
             export _OVERWATCHR_SHELL_ZSH_LOADED=1
 
+            _overwatchr_compute_title() {
+              print -r -- "${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD:t}}}"
+            }
+
+            _overwatchr_write_title() {
+              local title="$1"
+              if [ -n "$title" ]; then
+                printf '\\033]0;%s\\007' "$title"
+              fi
+            }
+
             _overwatchr_shell_title() {
               local title
-              title="${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD:t}}}"
+              title="$(_overwatchr_compute_title)"
               if [ -n "$title" ]; then
                 export OVERWATCHR_TITLE="$title"
-                printf '\\033]0;%s\\007' "$title"
+                _overwatchr_write_title "$title"
               fi
             }
 
@@ -167,6 +178,36 @@ private extension ShellProfile {
             fi
 
             _overwatchr_shell_title
+
+            codex() {
+              local title keeper_pid exit_code
+              title="$(_overwatchr_compute_title)"
+              if [ -n "$title" ]; then
+                export OVERWATCHR_TITLE="$title"
+              fi
+
+              if [ "${TERM_PROGRAM:-}" = "ghostty" ] && [ -z "${OVERWATCHR_DISABLE_CODEX_TITLE_KEEPALIVE:-}" ]; then
+                _overwatchr_write_title "$title"
+                (
+                  while true; do
+                    _overwatchr_write_title "$title" > /dev/tty 2>/dev/null || break
+                    sleep 1
+                  done
+                ) &
+                keeper_pid=$!
+              fi
+
+              command codex "$@"
+              exit_code=$?
+
+              if [ -n "${keeper_pid:-}" ]; then
+                kill "$keeper_pid" >/dev/null 2>&1 || true
+                wait "$keeper_pid" 2>/dev/null || true
+              fi
+
+              _overwatchr_shell_title
+              return $exit_code
+            }
             """
         case .bash:
             return """
@@ -176,12 +217,23 @@ private extension ShellProfile {
             fi
             export _OVERWATCHR_SHELL_BASH_LOADED=1
 
+            _overwatchr_compute_title() {
+              printf '%s' "${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD##*/}}}"
+            }
+
+            _overwatchr_write_title() {
+              local title="$1"
+              if [ -n "$title" ]; then
+                printf '\\033]0;%s\\007' "$title"
+              fi
+            }
+
             _overwatchr_shell_title() {
               local title
-              title="${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD##*/}}}"
+              title="$(_overwatchr_compute_title)"
               if [ -n "$title" ]; then
                 export OVERWATCHR_TITLE="$title"
-                printf '\\033]0;%s\\007' "$title"
+                _overwatchr_write_title "$title"
               fi
             }
 
@@ -191,6 +243,36 @@ private extension ShellProfile {
             esac
 
             _overwatchr_shell_title
+
+            codex() {
+              local title keeper_pid exit_code
+              title="$(_overwatchr_compute_title)"
+              if [ -n "$title" ]; then
+                export OVERWATCHR_TITLE="$title"
+              fi
+
+              if [ "${TERM_PROGRAM:-}" = "ghostty" ] && [ -z "${OVERWATCHR_DISABLE_CODEX_TITLE_KEEPALIVE:-}" ]; then
+                _overwatchr_write_title "$title"
+                (
+                  while true; do
+                    _overwatchr_write_title "$title" > /dev/tty 2>/dev/null || break
+                    sleep 1
+                  done
+                ) &
+                keeper_pid=$!
+              fi
+
+              command codex "$@"
+              exit_code=$?
+
+              if [ -n "${keeper_pid:-}" ]; then
+                kill "$keeper_pid" >/dev/null 2>&1 || true
+                wait "$keeper_pid" 2>/dev/null || true
+              fi
+
+              _overwatchr_shell_title
+              return $exit_code
+            }
             """
         }
     }
