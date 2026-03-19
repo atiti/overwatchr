@@ -115,41 +115,29 @@ private struct StatusMenuView: View {
 
     private var queueCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Attention Queue")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(model.alertCount == 0 ? "Nothing is asking for help right now." : "Newest pings stay at the top. Tap the arrow to jump in.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.white.opacity(0.7))
-                }
+            HStack(spacing: 10) {
+                Text(model.alertCount == 0 ? "Queue clear" : "\(model.alertCount) in queue")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.7))
 
                 Spacer()
 
-                HStack(spacing: 10) {
-                    if model.alertCount > 0 {
-                        Button {
-                            model.clearVisibleAlerts()
-                        } label: {
-                            Label("Clear", systemImage: "checkmark.circle")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.86))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(Color.white.opacity(0.08))
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .help("Mark all visible alerts as seen")
+                if model.alertCount > 0 {
+                    Button {
+                        model.clearVisibleAlerts()
+                    } label: {
+                        Label("Clear", systemImage: "checkmark.circle")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.86))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color.white.opacity(0.08))
+                            )
                     }
-
-                    Text("\(model.alertCount)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(model.alertCount == 0 ? Color.white.opacity(0.56) : BrandPalette.accent)
+                    .buttonStyle(.plain)
+                    .help("Mark all visible alerts as seen")
                 }
             }
 
