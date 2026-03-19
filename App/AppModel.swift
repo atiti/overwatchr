@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var lastUpdatedAt = Date()
     @Published private(set) var launchAtLoginEnabled = false
     @Published private(set) var alertChimeEnabled = false
+    @Published private(set) var jumpSoundEnabled = true
     @Published var launchAtLoginMessage: String?
 
     let store: EventStore
@@ -38,6 +39,7 @@ final class AppModel: ObservableObject {
         self.preferences = preferences
         self.seenLedger = (try? seenStore.load()) ?? SeenAlertLedger()
         self.alertChimeEnabled = preferences.alertChimeEnabled
+        self.jumpSoundEnabled = preferences.jumpSoundEnabled
         start()
     }
 
@@ -76,6 +78,7 @@ final class AppModel: ObservableObject {
             do {
                 try focusEngine.focus(event: alert)
                 markSeen(alert)
+                playJumpSoundIfEnabled()
                 lastErrorMessage = skippedCount == 0 ? nil : "Skipped \(skippedCount) stale alert\(skippedCount == 1 ? "" : "s") before jumping."
                 return
             } catch {
@@ -95,6 +98,7 @@ final class AppModel: ObservableObject {
         do {
             try focusEngine.focus(event: event)
             markSeen(event)
+            playJumpSoundIfEnabled()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -132,6 +136,11 @@ final class AppModel: ObservableObject {
         preferences.alertChimeEnabled = enabled
     }
 
+    func setJumpSoundEnabled(_ enabled: Bool) {
+        jumpSoundEnabled = enabled
+        preferences.jumpSoundEnabled = enabled
+    }
+
     func quit() {
         NSApp.terminate(nil)
     }
@@ -165,6 +174,13 @@ final class AppModel: ObservableObject {
         } catch {
             lastErrorMessage = "Focused the alert, but could not save seen-state: \(error.localizedDescription)"
         }
+    }
+
+    private func playJumpSoundIfEnabled() {
+        guard jumpSoundEnabled else {
+            return
+        }
+        NSSound(named: NSSound.Name("Hero"))?.play()
     }
 }
 #endif

@@ -223,6 +223,18 @@ private struct StatusMenuView: View {
                 }
 
                 SettingsRow(
+                    title: "Jump sound",
+                    subtitle: "Play a small hero sound when you teleport into the queue."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { model.jumpSoundEnabled },
+                        set: { model.setJumpSoundEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                }
+
+                SettingsRow(
                     title: "Accessibility",
                     subtitle: model.accessibilityTrusted ? "Window focusing permissions look good." : "Needed for reliable terminal focusing."
                 ) {
