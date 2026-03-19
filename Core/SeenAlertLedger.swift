@@ -23,4 +23,10 @@ public struct SeenAlertLedger: Codable, Equatable, Sendable {
         let currentTimestamp = lastSeenTimestampByAgentID[event.agentID] ?? .zero
         lastSeenTimestampByAgentID[event.agentID] = max(currentTimestamp, event.timestamp)
     }
+
+    public mutating func markSeen<S: Sequence>(_ events: S) where S.Element == AgentEvent {
+        for event in events {
+            markSeen(event)
+        }
+    }
 }

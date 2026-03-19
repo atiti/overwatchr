@@ -23,4 +23,14 @@ final class SeenAlertLedgerTests: XCTestCase {
         XCTAssertTrue(ledger.visibleAlerts(from: [copyAlert]).isEmpty)
         XCTAssertEqual(ledger.visibleAlerts(from: [apiAlert]), [apiAlert])
     }
+
+    func testMarkSeenSequenceHidesAllMatchingAlerts() {
+        var ledger = SeenAlertLedger()
+        let copyAlert = AgentEvent(agentID: "copy", project: "landing", status: .needsInput, timestamp: 100)
+        let apiAlert = AgentEvent(agentID: "api", project: "backend", status: .error, timestamp: 200)
+
+        ledger.markSeen([copyAlert, apiAlert])
+
+        XCTAssertTrue(ledger.visibleAlerts(from: [copyAlert, apiAlert]).isEmpty)
+    }
 }

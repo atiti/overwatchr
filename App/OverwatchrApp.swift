@@ -127,10 +127,30 @@ private struct StatusMenuView: View {
 
                 Spacer()
 
-                Text("\(model.alertCount)")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(model.alertCount == 0 ? Color.white.opacity(0.56) : BrandPalette.accent)
+                HStack(spacing: 10) {
+                    if model.alertCount > 0 {
+                        Button {
+                            model.clearVisibleAlerts()
+                        } label: {
+                            Label("Clear", systemImage: "checkmark.circle")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.86))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color.white.opacity(0.08))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Mark all visible alerts as seen")
+                    }
+
+                    Text("\(model.alertCount)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(model.alertCount == 0 ? Color.white.opacity(0.56) : BrandPalette.accent)
+                }
             }
 
             if model.alerts.isEmpty {

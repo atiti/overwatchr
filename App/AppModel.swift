@@ -155,6 +155,24 @@ final class AppModel: ObservableObject {
         preferences.jumpSoundEnabled = enabled
     }
 
+    func clearVisibleAlerts() {
+        guard !alerts.isEmpty else {
+            return
+        }
+
+        let clearedCount = alerts.count
+        seenLedger.markSeen(alerts)
+        alerts = seenLedger.visibleAlerts(from: currentAlerts)
+        temporarilySkippedAgentIDs.removeAll()
+        lastErrorMessage = "Cleared \(clearedCount) alert\(clearedCount == 1 ? "" : "s") from the queue."
+
+        do {
+            try seenStore.save(seenLedger)
+        } catch {
+            lastErrorMessage = "Cleared the queue, but could not save seen-state: \(error.localizedDescription)"
+        }
+    }
+
     func quit() {
         NSApp.terminate(nil)
     }
@@ -194,12 +212,7 @@ final class AppModel: ObservableObject {
     private func markSeen(_ event: AgentEvent) {
         seenLedger.markSeen(event)
         alerts = seenLedger.visibleAlerts(from: currentAlerts)
-
-        do {
-            try seenStore.save(seenLedger)
-        } catch {
-            lastErrorMessage = "Focused the alert, but could not save seen-state: \(error.localizedDescription)"
-        }
+        saveSeenLedger(or: "Focused the alert, but could not save seen-state")
     }
 
     private func playJumpSoundIfEnabled() {
@@ -207,6 +220,14 @@ final class AppModel: ObservableObject {
             return
         }
         NSSound(named: NSSound.Name("Hero"))?.play()
+    }
+
+    private func saveSeenLedger(or prefix: String) {
+        do {
+            try seenStore.save(seenLedger)
+        } catch {
+            lastErrorMessage = "\(prefix): \(error.localizedDescription)"
+        }
     }
 }
 #endif
