@@ -47,21 +47,35 @@ public final class FocusEngine {
             throw FocusError.missingTerminal
         }
 
+        let workingDirectoryQueries = [event.project, event.title]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .reduce(into: [String]()) { result, query in
+                if !result.contains(query) {
+                    result.append(query)
+                }
+            }
+
         try focus(
             target: FocusTarget(
                 terminalName: terminal,
                 ttyPath: event.tty,
                 titleSubstring: FocusHintResolver.queries(for: event).first
             ),
-            titleQueries: FocusHintResolver.queries(for: event)
+            titleQueries: FocusHintResolver.queries(for: event),
+            workingDirectoryQueries: workingDirectoryQueries
         )
     }
 
     public func focus(target: FocusTarget) throws {
-        try focus(target: target, titleQueries: [target.titleSubstring].compactMap { $0 })
+        try focus(
+            target: target,
+            titleQueries: [target.titleSubstring].compactMap { $0 },
+            workingDirectoryQueries: []
+        )
     }
 
-    private func focus(target: FocusTarget, titleQueries: [String]) throws {
+    private func focus(target: FocusTarget, titleQueries: [String], workingDirectoryQueries: [String]) throws {
         let terminal = TerminalApplication(name: target.terminalName)
 
         guard let app = findRunningApplication(for: terminal) else {
@@ -72,6 +86,12 @@ public final class FocusEngine {
 
         if let tty = target.ttyPath, !tty.isEmpty, runTTYMatchAppleScript(for: terminal, tty: tty) {
             return
+        }
+
+        for workingDirectory in workingDirectoryQueries where !workingDirectory.isEmpty {
+            if runWorkingDirectoryMatchAppleScript(for: terminal, workingDirectoryBasename: workingDirectory) {
+                return
+            }
         }
 
         for title in titleQueries where !title.isEmpty {
@@ -152,6 +172,20 @@ public final class FocusEngine {
 
     private func runTTYMatchAppleScript(for terminal: TerminalApplication, tty: String) -> Bool {
         guard let scriptSource = terminal.appleScriptWindowFocusCommand(matchingTTY: tty),
+              let output = executeAppleScript(scriptSource)?.stringValue else {
+            return false
+        }
+
+        return output == "matched"
+    }
+
+    private func runWorkingDirectoryMatchAppleScript(
+        for terminal: TerminalApplication,
+        workingDirectoryBasename: String
+    ) -> Bool {
+        guard let scriptSource = terminal.appleScriptWindowFocusCommand(
+            matchingWorkingDirectoryBasename: workingDirectoryBasename
+        ),
               let output = executeAppleScript(scriptSource)?.stringValue else {
             return false
         }

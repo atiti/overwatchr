@@ -228,6 +228,37 @@ public enum TerminalApplication: Equatable, Sendable {
         }
     }
 
+    public func appleScriptWindowFocusCommand(matchingWorkingDirectoryBasename basename: String) -> String? {
+        let escapedBasename = basename
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+
+        switch self {
+        case .ghostty:
+            return """
+            tell application "Ghostty"
+                activate
+                set query to "\(escapedBasename)"
+                repeat with t in terminals
+                    set workingDirectoryPath to ""
+                    try
+                        set workingDirectoryPath to (working directory of t as text)
+                    on error
+                        set workingDirectoryPath to ""
+                    end try
+                    if workingDirectoryPath is query or workingDirectoryPath ends with ("/" & query) then
+                        focus t
+                        return "matched"
+                    end if
+                end repeat
+                return ""
+            end tell
+            """
+        case .iTerm, .terminal, .other:
+            return nil
+        }
+    }
+
     public func appleScriptWindowFocusCommand(matching title: String) -> String? {
         let escapedTitle = title
             .replacingOccurrences(of: "\\", with: "\\\\")
