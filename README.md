@@ -4,7 +4,7 @@
 [![Release](https://github.com/atiti/overwatchr/actions/workflows/release.yml/badge.svg)](https://github.com/atiti/overwatchr/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/atiti/overwatchr)](./LICENSE)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black)](https://www.apple.com/macos/)
-[![Swift](https://img.shields.io/badge/Swift-6-orange)](https://www.swift.org/)
+[![Swift](https://img.shields.io/badge/Swift-5.10%2B-orange)](https://www.swift.org/)
 
 overwatchr is a native macOS menu bar utility for terminal-based AI agents. It watches for turns that need a human, keeps a queue in the menu bar, and jumps you back to the right terminal tab before your attention gets shredded.
 

@@ -5,7 +5,6 @@ enum AppPreferenceKey {
     static let alertChimeEnabled = "alertChimeEnabled"
 }
 
-@MainActor
 struct AppPreferences {
     private let defaults: UserDefaults
 
