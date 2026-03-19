@@ -66,6 +66,7 @@ final class AppModel: ObservableObject {
     }
 
     func focusNextAlert() {
+        refreshAccessibilityStatus()
         let pendingAlerts = alerts
         guard !pendingAlerts.isEmpty else {
             return
@@ -79,6 +80,7 @@ final class AppModel: ObservableObject {
                 try focusEngine.focus(event: alert)
                 markSeen(alert)
                 playJumpSoundIfEnabled()
+                refreshAccessibilityStatus()
                 lastErrorMessage = skippedCount == 0 ? nil : "Skipped \(skippedCount) stale alert\(skippedCount == 1 ? "" : "s") before jumping."
                 return
             } catch {
@@ -95,10 +97,12 @@ final class AppModel: ObservableObject {
     }
 
     func focus(_ event: AgentEvent) {
+        refreshAccessibilityStatus()
         do {
             try focusEngine.focus(event: event)
             markSeen(event)
             playJumpSoundIfEnabled()
+            refreshAccessibilityStatus()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -154,6 +158,7 @@ final class AppModel: ObservableObject {
     }
 
     private func applyAlertUpdate(_ currentAlerts: [AgentEvent], newEvents: [AgentEvent] = []) {
+        refreshAccessibilityStatus()
         self.currentAlerts = currentAlerts
         alerts = seenLedger.visibleAlerts(from: currentAlerts)
         lastUpdatedAt = Date()

@@ -62,6 +62,7 @@ public final class EventWatcher: NSObject {
         do {
             let batch = try store.readEvents(from: readOffset)
             guard batch.nextOffset != readOffset else {
+                emit(newEvents: [])
                 return
             }
 
@@ -82,4 +83,3 @@ public final class EventWatcher: NSObject {
         onUpdate(EventWatcherUpdate(newEvents: newEvents, currentAlerts: queue.alerts))
     }
 }
-
