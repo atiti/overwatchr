@@ -17,4 +17,17 @@ final class WindowTitleMatcherTests: XCTestCase {
     func testReturnsNilWhenThereIsNoReasonableMatch() {
         XCTAssertNil(WindowTitleMatcher.bestMatchIndex(for: "payments", in: ["landing copy", "api bugfix"]))
     }
+
+    func testPrefersBestGhosttyStyleWindowMenuMatch() {
+        let candidates = [
+            "Minimize",
+            "Show Previous Tab",
+            "Landing Page Engine",
+            "Markster Ops"
+        ]
+
+        let bestIndex = WindowTitleMatcher.bestMatchIndex(for: "landing page", in: candidates)
+
+        XCTAssertEqual(bestIndex, 2)
+    }
 }

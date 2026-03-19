@@ -13,6 +13,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Build release binaries
+        run: swift build -c release
       - name: Package app and CLI
         run: |
           chmod +x scripts/build_app_bundle.sh install.sh scripts/smoke.sh
@@ -32,4 +36,3 @@ jobs:
           files: |
             dist/overwatchr-*-macos-app.zip
             dist/overwatchr-*-macos-cli.zip
-

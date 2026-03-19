@@ -58,6 +58,10 @@ public final class FocusEngine {
         app.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
 
         if let title = target.titleSubstring, !title.isEmpty {
+            if terminal == .ghostty, runTitleMatchAppleScript(for: terminal, title: title) {
+                return
+            }
+
             let focused = try focusWindow(of: app, matching: title)
             if focused {
                 return
@@ -173,6 +177,13 @@ public final class FocusEngine {
     }
 
     private func runTitleMatchAppleScript(for terminal: TerminalApplication, title: String) -> Bool {
+        if let matchedMenuItem = bestWindowMenuItem(for: terminal, matching: title),
+           let scriptSource = terminal.appleScriptSelectWindowMenuItemCommand(title: matchedMenuItem),
+           let output = executeAppleScript(scriptSource)?.stringValue,
+           output == "matched" {
+            return true
+        }
+
         guard let scriptSource = terminal.appleScriptWindowFocusCommand(matching: title) else {
             return false
         }
@@ -182,6 +193,32 @@ public final class FocusEngine {
         }
 
         return output == "matched"
+    }
+
+    private func bestWindowMenuItem(for terminal: TerminalApplication, matching query: String) -> String? {
+        guard let scriptSource = terminal.appleScriptWindowMenuItemsCommand,
+              let descriptor = executeAppleScript(scriptSource) else {
+            return nil
+        }
+
+        let candidates = stringValues(from: descriptor)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard let bestIndex = WindowTitleMatcher.bestMatchIndex(for: query, in: candidates) else {
+            return nil
+        }
+
+        return candidates[bestIndex]
+    }
+
+    private func stringValues(from descriptor: NSAppleEventDescriptor) -> [String] {
+        guard descriptor.numberOfItems > 0 else {
+            return descriptor.stringValue.map { [$0] } ?? []
+        }
+
+        return (1...descriptor.numberOfItems)
+            .compactMap { descriptor.atIndex($0)?.stringValue }
     }
 
     private func executeAppleScript(_ source: String) -> NSAppleEventDescriptor? {

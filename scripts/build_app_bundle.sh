@@ -7,6 +7,7 @@ DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist}"
 APP_NAME="Overwatchr.app"
 APP_BUNDLE="$DIST_DIR/$APP_NAME"
 VERSION="${VERSION:-$(git -C "$ROOT_DIR" describe --tags --always --dirty 2>/dev/null || echo "0.1.0")}"
+VERSION="${VERSION#v}"
 CREATE_ARCHIVE="${CREATE_ARCHIVE:-1}"
 
 mkdir -p "$DIST_DIR"

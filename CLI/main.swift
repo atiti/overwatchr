@@ -4,6 +4,7 @@ import OverwatchrCore
 enum CLIError: Error, LocalizedError {
     case usage(String)
     case missingValue(String)
+    case invalidValue(option: String, value: String)
 
     var errorDescription: String? {
         switch self {
@@ -11,12 +12,15 @@ enum CLIError: Error, LocalizedError {
             return message
         case .missingValue(let option):
             return "Missing value for \(option)."
+        case .invalidValue(let option, let value):
+            return "Invalid value for \(option): \(value)"
         }
     }
 }
 
 struct ParsedCommand {
     let name: String
+    let positionals: [String]
     let options: [String: String]
 }
 
@@ -24,44 +28,57 @@ struct ParsedCommand {
 struct OverwatchrCLI {
     static func main() {
         do {
-            let parsed = try parse(arguments: Array(CommandLine.arguments.dropFirst()))
-            let event = try makeEvent(from: parsed)
-            try EventStore().append(event)
-            print("Recorded \(event.status.rawValue) for \(event.agentID)")
+            let arguments = Array(CommandLine.arguments.dropFirst())
+            guard let command = arguments.first else {
+                throw CLIError.usage("Missing command.")
+            }
+
+            switch command {
+            case "alert", "done", "error":
+                let parsed = try parseCommand(arguments)
+                let event = try makeEvent(from: parsed)
+                try EventStore().append(event)
+                print("Recorded \(event.status.rawValue) for \(event.agentID)")
+            case "hooks":
+                try runHooksCommand(arguments: Array(arguments.dropFirst()))
+            case "hook-run":
+                try runHookBridge(arguments: Array(arguments.dropFirst()))
+            case "--help", "-h", "help":
+                throw CLIError.usage("overwatchr command reference")
+            default:
+                throw CLIError.usage("Unknown command: \(command)")
+            }
         } catch {
             fputs("\(error.localizedDescription)\n\n\(usage)\n", stderr)
             Foundation.exit(1)
         }
     }
 
-    private static func parse(arguments: [String]) throws -> ParsedCommand {
+    private static func parseCommand(_ arguments: [String]) throws -> ParsedCommand {
         guard let command = arguments.first else {
             throw CLIError.usage("Missing command.")
         }
 
-        if command == "--help" || command == "-h" {
-            throw CLIError.usage("overwatchr command reference")
-        }
-
         var options: [String: String] = [:]
+        var positionals: [String] = []
         var index = 1
 
         while index < arguments.count {
             let argument = arguments[index]
-            guard argument.hasPrefix("--") else {
-                throw CLIError.usage("Unexpected argument: \(argument)")
+            if argument.hasPrefix("--") {
+                let nextIndex = index + 1
+                guard nextIndex < arguments.count else {
+                    throw CLIError.missingValue(argument)
+                }
+                options[String(argument.dropFirst(2))] = arguments[nextIndex]
+                index += 2
+            } else {
+                positionals.append(argument)
+                index += 1
             }
-
-            let nextIndex = index + 1
-            guard nextIndex < arguments.count else {
-                throw CLIError.missingValue(argument)
-            }
-
-            options[String(argument.dropFirst(2))] = arguments[nextIndex]
-            index += 2
         }
 
-        return ParsedCommand(name: command, options: options)
+        return ParsedCommand(name: command, positionals: positionals, options: options)
     }
 
     private static func makeEvent(from parsed: ParsedCommand) throws -> AgentEvent {
@@ -74,7 +91,7 @@ struct OverwatchrCLI {
         case "error":
             status = .error
         default:
-            throw CLIError.usage("Unknown command: \(parsed.name)")
+            throw CLIError.usage("Unknown event command: \(parsed.name)")
         }
 
         guard let agent = parsed.options["agent"], !agent.isEmpty else {
@@ -91,16 +108,92 @@ struct OverwatchrCLI {
         )
     }
 
+    private static func runHooksCommand(arguments: [String]) throws {
+        let parsed = try parseCommand(["hooks"] + arguments)
+        guard let subcommand = parsed.positionals.first else {
+            throw CLIError.usage("Missing hooks subcommand.")
+        }
+
+        switch subcommand {
+        case "install":
+            try installHooks(from: parsed)
+        default:
+            throw CLIError.usage("Unknown hooks subcommand: \(subcommand)")
+        }
+    }
+
+    private static func installHooks(from parsed: ParsedCommand) throws {
+        guard parsed.positionals.count >= 2 else {
+            throw CLIError.usage("Usage: overwatchr hooks install <codex|claude|opencode|all> [--scope project|user] [--dir PATH]")
+        }
+
+        guard let tool = IntegrationTool(rawValue: parsed.positionals[1]) else {
+            throw CLIError.invalidValue(option: "tool", value: parsed.positionals[1])
+        }
+
+        let scope = try parseScope(parsed.options["scope"] ?? "project")
+        let projectDirectoryURL = URL(fileURLWithPath: parsed.options["dir"] ?? FileManager.default.currentDirectoryPath, isDirectory: true)
+        let binaryPath = parsed.options["overwatchr-path"] ?? resolvedExecutablePath()
+
+        let installer = IntegrationInstaller()
+        let results = try installer.install(
+            tool: tool,
+            scope: scope,
+            projectDirectoryURL: projectDirectoryURL,
+            overwatchrBinaryPath: binaryPath
+        )
+
+        for result in results {
+            print("Installed \(result.tool.rawValue) hooks (\(result.scope.rawValue)):")
+            for file in result.files {
+                print("  - \(file.path)")
+            }
+            for note in result.notes {
+                print("    \(note)")
+            }
+        }
+    }
+
+    private static func runHookBridge(arguments: [String]) throws {
+        guard let rawTool = arguments.first, let tool = HookBridgeTool(rawValue: rawTool) else {
+            throw CLIError.usage("Usage: overwatchr hook-run <codex|claude|opencode>")
+        }
+
+        let stdinData = FileHandle.standardInput.readDataToEndOfFile()
+        let payload = try HookBridgePayload.decodeJSON(from: stdinData)
+        let input = HookBridgeInput(tool: tool, payload: payload)
+
+        switch HookBridge.action(for: input) {
+        case .ignore:
+            break
+        case .emit(let event):
+            try EventStore().append(event)
+        }
+    }
+
+    private static func parseScope(_ rawValue: String) throws -> IntegrationScope {
+        guard let scope = IntegrationScope(rawValue: rawValue) else {
+            throw CLIError.invalidValue(option: "scope", value: rawValue)
+        }
+        return scope
+    }
+
+    private static func resolvedExecutablePath() -> String {
+        let executablePath = CommandLine.arguments.first ?? "overwatchr"
+        return URL(fileURLWithPath: executablePath).path
+    }
+
     private static let usage = """
     Usage:
       overwatchr alert --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--title TITLE]
       overwatchr done --agent AGENT [--project PROJECT]
       overwatchr error --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--title TITLE]
+      overwatchr hooks install <codex|claude|opencode|all> [--scope project|user] [--dir PATH]
+      overwatchr hook-run <codex|claude|opencode>
 
     Examples:
       overwatchr alert --agent copy --project landing --terminal ghostty --title "landing:copy"
-      overwatchr done --agent copy --project landing
-      overwatchr error --agent api --project backend --terminal iTerm2 --title "backend:api"
+      overwatchr hooks install codex --scope project
+      overwatchr hooks install all --scope user
     """
 }
-

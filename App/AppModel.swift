@@ -3,6 +3,7 @@ import ApplicationServices
 import AppKit
 import Foundation
 import OverwatchrCore
+import ServiceManagement
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -10,19 +11,33 @@ final class AppModel: ObservableObject {
     @Published var lastErrorMessage: String?
     @Published private(set) var accessibilityTrusted = AXIsProcessTrusted()
     @Published private(set) var lastUpdatedAt = Date()
+    @Published private(set) var launchAtLoginEnabled = false
+    @Published private(set) var alertChimeEnabled = false
+    @Published var launchAtLoginMessage: String?
 
     let store: EventStore
 
+    private var preferences: AppPreferences
+    private let seenStore: SeenAlertStore
     private let focusEngine = FocusEngine()
     private let hotKeyMonitor = GlobalHotKeyMonitor()
     private var hasStarted = false
+    private var currentAlerts: [AgentEvent] = []
+    private var seenLedger: SeenAlertLedger
     private lazy var watcher = EventWatcher(store: store) { [weak self] update in
-        self?.alerts = update.currentAlerts
-        self?.lastUpdatedAt = Date()
+        self?.applyAlertUpdate(update.currentAlerts, newEvents: update.newEvents)
     }
 
-    init(store: EventStore = EventStore()) {
+    init(
+        store: EventStore = EventStore(),
+        seenStore: SeenAlertStore = SeenAlertStore(),
+        preferences: AppPreferences = AppPreferences()
+    ) {
         self.store = store
+        self.seenStore = seenStore
+        self.preferences = preferences
+        self.seenLedger = (try? seenStore.load()) ?? SeenAlertLedger()
+        self.alertChimeEnabled = preferences.alertChimeEnabled
         start()
     }
 
@@ -36,6 +51,7 @@ final class AppModel: ObservableObject {
         }
         hasStarted = true
         refreshAccessibilityStatus()
+        refreshLaunchAtLoginStatus()
         watcher.start()
 
         do {
@@ -58,15 +74,12 @@ final class AppModel: ObservableObject {
     func focus(_ event: AgentEvent) {
         do {
             try focusEngine.focus(event: event)
+            markSeen(event)
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = error.localizedDescription
             refreshAccessibilityStatus()
         }
-    }
-
-    func revealEventLog() {
-        NSWorkspace.shared.activateFileViewerSelecting([store.fileURL])
     }
 
     func openAccessibilitySettings() {
@@ -78,17 +91,60 @@ final class AppModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
-    func copyCLIExample() {
-        let example = """
-        overwatchr alert --agent copy --project landing --terminal ghostty --title "landing:copy"
-        """
+    func setLaunchAtLoginEnabled(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+                launchAtLoginMessage = "Overwatchr will try to launch when you log in."
+            } else {
+                try SMAppService.mainApp.unregister()
+                launchAtLoginMessage = "Launch at login disabled."
+            }
+            refreshLaunchAtLoginStatus()
+        } catch {
+            launchAtLoginMessage = error.localizedDescription
+            refreshLaunchAtLoginStatus()
+        }
+    }
 
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(example, forType: .string)
+    func setAlertChimeEnabled(_ enabled: Bool) {
+        alertChimeEnabled = enabled
+        preferences.alertChimeEnabled = enabled
+    }
+
+    func quit() {
+        NSApp.terminate(nil)
     }
 
     private func refreshAccessibilityStatus() {
         accessibilityTrusted = AXIsProcessTrusted()
+    }
+
+    private func refreshLaunchAtLoginStatus() {
+        launchAtLoginEnabled = SMAppService.mainApp.status == .enabled
+    }
+
+    private func applyAlertUpdate(_ currentAlerts: [AgentEvent], newEvents: [AgentEvent] = []) {
+        self.currentAlerts = currentAlerts
+        alerts = seenLedger.visibleAlerts(from: currentAlerts)
+        lastUpdatedAt = Date()
+
+        let incomingAttention = newEvents.filter(\.status.requiresAttention)
+        let unseenIncomingAttention = seenLedger.visibleAlerts(from: incomingAttention)
+        if alertChimeEnabled, !unseenIncomingAttention.isEmpty {
+            NSSound(named: NSSound.Name("Glass"))?.play()
+        }
+    }
+
+    private func markSeen(_ event: AgentEvent) {
+        seenLedger.markSeen(event)
+        alerts = seenLedger.visibleAlerts(from: currentAlerts)
+
+        do {
+            try seenStore.save(seenLedger)
+        } catch {
+            lastErrorMessage = "Focused the alert, but could not save seen-state: \(error.localizedDescription)"
+        }
     }
 }
 #endif

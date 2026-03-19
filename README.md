@@ -1,106 +1,156 @@
 # overwatchr
 
-overwatchr is a native macOS menu bar sidekick for terminal-based AI agents. Your agents keep doing their thing in Ghostty, iTerm, or Terminal; overwatchr sits in the menu bar, spots anything that needs a human, and jumps you back to the right window fast.
+[![CI](https://github.com/atiti/overwatchr/actions/workflows/ci.yml/badge.svg)](https://github.com/atiti/overwatchr/actions/workflows/ci.yml)
+[![Release](https://github.com/atiti/overwatchr/actions/workflows/release.yml/badge.svg)](https://github.com/atiti/overwatchr/actions/workflows/release.yml)
+[![License](https://img.shields.io/github/license/atiti/overwatchr)](./LICENSE)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black)](https://www.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-6-orange)](https://www.swift.org/)
+
+overwatchr is a native macOS menu bar utility for terminal-based AI agents. It watches for turns that need a human, keeps a queue in the menu bar, and jumps you back to the right terminal tab before your attention gets shredded.
+
+It is built with Swift, SwiftUI, and native macOS APIs only. No Electron. No tmux dependency. No Hammerspoon.
 
 ## Why it exists
 
-When a few agent sessions turn into ten, context switches get messy. overwatchr gives you one small control tower that:
+When Codex, Claude Code, OpenCode, or other terminal agents are running in parallel, the hard part is not starting them. It is noticing the exact moment one of them needs you, then getting back to the correct tab fast.
 
-- watches `~/.overwatchr/events.jsonl`
-- shows active alerts in the menu bar
-- lets you hop to the next alert with `Cmd+Shift+A`
-- brings Ghostty, iTerm, or Terminal to the front
+overwatchr gives you:
 
-## Repository layout
-
-- `App/`: SwiftUI status-bar app
-- `CLI/`: tiny `overwatchr` command writer
-- `Core/`: shared event, queue, watcher, and focus logic
-- `scripts/`: app bundling, icon generation, and smoke-test helpers
-- `Tests/OverwatchrCoreTests/`: unit tests for the boring-but-important bits
-- `install.sh`: release build and local install helper
-
-## Build and run
-
-```bash
-swift build
-swift test
-swift run overwatchr-app
-scripts/smoke.sh
-```
-
-No config is required to get started, but exact window focusing works best when Accessibility access is granted in macOS System Settings.
+- a menu bar queue of live agent pings
+- a global jump shortcut: `Ctrl+Option+Cmd+O`
+- native terminal focusing for Ghostty, iTerm, and Terminal.app
+- local `seen` behavior so opened alerts drop out until the next new event
+- hook installers for Codex CLI, Claude Code, and OpenCode
 
 ## Install
 
-Local install:
+One-line install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/atiti/overwatchr/main/install.sh | bash
+```
+
+One-line install plus user-wide hook setup:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/atiti/overwatchr/main/install.sh | INSTALL_HOOKS=1 bash
+```
+
+By default, the installer:
+
+- puts the CLI in `/usr/local/bin` if writable, otherwise `~/.local/bin`
+- installs `Overwatchr.app` into `/Applications` if writable, otherwise `~/Applications`
+- leaves hook config untouched unless you opt into `INSTALL_HOOKS=1`
+
+From a local checkout:
 
 ```bash
 ./install.sh
 ```
 
-One-line install after publishing:
+If you only want the CLI:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/<your-org>/overwatchr/main/install.sh | bash
+INSTALL_APP=0 ./install.sh
 ```
 
-The script installs:
-
-- `overwatchr` into `/usr/local/bin` by default
-- `Overwatchr.app` into `/Applications` or `~/Applications`
-
-If you want a distributable app bundle and archives without installing them, run:
+If you want release artifacts without installing:
 
 ```bash
 scripts/build_app_bundle.sh
 ```
 
-That produces:
+## Quick Start
 
-- `dist/Overwatchr.app`
-- `dist/overwatchr-<version>-macos-app.zip`
-- `dist/overwatchr-<version>-macos-cli.zip`
-
-## CLI usage
+1. Install the app and launch `Overwatchr.app`.
+2. Grant Accessibility access so terminal focusing works reliably.
+3. Install hooks for the tools you use:
 
 ```bash
-export AGENT_ID=copy
-
-overwatchr alert \
-  --agent "$AGENT_ID" \
-  --project landing \
-  --terminal ghostty \
-  --title "landing:copy"
-
-overwatchr error \
-  --agent "$AGENT_ID" \
-  --project landing \
-  --terminal ghostty \
-  --title "landing:copy"
-
-overwatchr done --agent "$AGENT_ID" --project landing
+overwatchr hooks install all --scope user
 ```
 
-Each command appends a JSON object to `~/.overwatchr/events.jsonl`. `done` clears the agent from the in-memory alert queue, while `alert` and `error` keep it visible until a later `done` event arrives.
+That sets up:
 
-That makes it easy to drop into agent wrappers or shell hooks. The contract is intentionally tiny: write events, let the menu bar app do the watching.
+- Codex CLI via `~/.codex/config.toml` and `~/.codex/hooks.json`
+- Claude Code via `~/.claude/settings.json`
+- OpenCode via `~/.config/opencode/plugins/overwatchr.js`
 
-## Notes
+Project-local setup also works:
 
-- Supported terminals in the MVP: Ghostty, iTerm, Terminal.app
-- The menu bar item is intentionally tiny: it stays quiet when idle and shows an alert count when humans are needed
-- No Electron, Node UI, Hammerspoon, tmux, or external runtime dependencies
-- The app is menu bar only and hides its Dock icon
+```bash
+overwatchr hooks install all --scope project
+```
 
-## Precompiled binaries
+## Manual CLI Usage
 
-Once GitHub Releases are enabled, tagged builds (`v0.1.0`, `v0.2.0`, and so on) will publish:
+You can also write events directly:
 
-- a zipped `Overwatchr.app`
-- a zipped standalone `overwatchr` CLI binary
+```bash
+overwatchr alert --agent copy --project landing --terminal ghostty --title "landing:copy"
+overwatchr error --agent api --project backend --terminal iTerm2 --title "backend:api"
+overwatchr done --agent copy --project landing
+```
 
-The repository includes:
+Events are appended to `~/.overwatchr/events.jsonl`.
 
-- `.github/workflows/ci.yml` for build/test validation
-- `.github/workflows/release.yml` for tagged release packaging
+Queue behavior:
+
+- `alert` and `error` create or refresh an active alert for that agent
+- opening an alert marks it `seen` locally, so it disappears until a newer event arrives
+- `done` clears it from the active stream
+- optional alert chime lives in the menu bar settings pane
+
+## Hook Bridge
+
+overwatchr includes a native bridge for hook-enabled tools:
+
+```bash
+overwatchr hook-run codex
+overwatchr hook-run claude
+overwatchr hook-run opencode
+```
+
+You usually do not call these by hand. The generated hook configs call them for you.
+
+## Supported Terminals
+
+- Ghostty
+- iTerm
+- Terminal.app
+
+Ghostty uses both Accessibility window matching and a native `Window` menu fallback so tab switching is reliable even when AX window titles are not.
+
+## Development
+
+```bash
+swift build
+swift test
+swift run overwatchr-app
+scripts/build_app_bundle.sh
+```
+
+The repository layout is:
+
+- `App/`: menu bar app
+- `CLI/`: `overwatchr` executable
+- `Core/`: shared queue, store, focus, hook, and installer logic
+- `scripts/`: build and smoke helpers
+- `Tests/OverwatchrCoreTests/`: unit tests
+
+## Release Flow
+
+- CI builds and tests on macOS via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)
+- Tagged releases package the CLI and app via [`.github/workflows/release.yml`](./.github/workflows/release.yml)
+- release tags should use `v*`, for example `v0.1.0`
+
+## Roadmap
+
+- more hook targets
+- better terminal title inference
+- signed and notarized app bundles
+- optional richer notifications beyond the menu bar
+
+## Contributing
+
+Bug reports, hook integrations, terminal support fixes, and installer hardening are all welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).

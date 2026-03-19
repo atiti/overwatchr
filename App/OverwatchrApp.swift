@@ -5,7 +5,33 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !activateExistingInstanceIfNeeded() else {
+            NSApp.terminate(nil)
+            return
+        }
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    private func activateExistingInstanceIfNeeded() -> Bool {
+        let currentProcessID = ProcessInfo.processInfo.processIdentifier
+        let currentExecutablePath = Bundle.main.executableURL?.resolvingSymlinksInPath().path
+
+        let runningPeers = NSWorkspace.shared.runningApplications.filter { app in
+            guard app.processIdentifier != currentProcessID else {
+                return false
+            }
+
+            let sameExecutable = app.executableURL?.resolvingSymlinksInPath().path == currentExecutablePath
+            let sameName = app.localizedName == "overwatchr-app"
+            return sameExecutable || sameName
+        }
+
+        guard let existing = runningPeers.first else {
+            return false
+        }
+
+        existing.activate(options: [.activateIgnoringOtherApps])
+        return true
     }
 }
 
@@ -28,39 +54,15 @@ struct OverwatchrMenuBarApp: App {
 
 private struct StatusMenuView: View {
     @ObservedObject var model: AppModel
+    @State private var showingSettings = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            header
-            heroCard
-
-            if !model.alerts.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("Attention Queue")
-                            .font(.system(size: 13, weight: .semibold))
-                        Spacer()
-                        Text("\(model.alertCount)")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(BrandPalette.accent)
-                    }
-                    .foregroundStyle(.white)
-
-                    ScrollView {
-                        VStack(spacing: 10) {
-                            ForEach(model.alerts) { alert in
-                                AlertRow(alert: alert) {
-                                    model.focus(alert)
-                                }
-                                .accessibilityIdentifier("alert-\(alert.agentID)")
-                            }
-                        }
-                    }
-                    .frame(maxHeight: 220)
-                }
+            if showingSettings {
+                settingsContent
+            } else {
+                mainContent
             }
-
-            footer
         }
         .padding(16)
         .background(
@@ -70,6 +72,15 @@ private struct StatusMenuView: View {
                 endPoint: .bottomTrailing
             )
         )
+        .animation(.easeInOut(duration: 0.16), value: showingSettings)
+    }
+
+    private var mainContent: some View {
+        Group {
+            header
+            queueCard
+            footer
+        }
     }
 
     private var header: some View {
@@ -90,50 +101,57 @@ private struct StatusMenuView: View {
                 Text("overwatchr")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                Text(model.alertCount == 0 ? "Quietly watching your agent swarm." : "Your control tower has \(model.alertCount) live ping\(model.alertCount == 1 ? "" : "s").")
+                Text(model.alertCount == 0 ? "Quietly watching your agent swarm." : "Watching \(model.alertCount) ping\(model.alertCount == 1 ? "" : "s") that need your eyes.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.white.opacity(0.72))
             }
             Spacer()
+
+            IconButton(systemImage: "gearshape.fill") {
+                showingSettings = true
+            }
         }
     }
 
-    private var heroCard: some View {
+    private var queueCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(model.alertCount == 0 ? "Airspace clear" : "Human needed")
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Attention Queue")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
-                    Text(model.alertCount == 0 ? "Nothing is asking for help right now." : "Jump straight to the freshest terminal ping.")
+                    Text(model.alertCount == 0 ? "Nothing is asking for help right now." : "Newest pings stay at the top. Tap the arrow to jump in.")
                         .font(.system(size: 12))
-                        .foregroundStyle(Color.white.opacity(0.72))
+                        .foregroundStyle(Color.white.opacity(0.7))
                 }
+
                 Spacer()
-                StatusPill(count: model.alertCount)
+
+                Text("\(model.alertCount)")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(model.alertCount == 0 ? Color.white.opacity(0.56) : BrandPalette.accent)
             }
 
-            Button {
-                model.focusNextAlert()
-            } label: {
-                HStack {
-                    Image(systemName: "arrow.up.forward.app.fill")
-                    Text(model.alertCount == 0 ? "No active ping" : "Jump To Newest Ping")
-                    Spacer()
-                    Text("Cmd+Shift+A")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.75))
+            if model.alerts.isEmpty {
+                EmptyQueueCard()
+            } else {
+                ScrollView {
+                    VStack(spacing: 10) {
+                        ForEach(model.alerts) { alert in
+                            AlertRow(
+                                alert: alert,
+                                isNewest: alert.id == model.alerts.first?.id
+                            ) {
+                                model.focus(alert)
+                            }
+                            .accessibilityIdentifier("alert-\(alert.agentID)")
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(model.alertCount == 0 ? Color.white.opacity(0.06) : BrandPalette.accent.opacity(0.18))
-                )
+                .frame(minHeight: 96, maxHeight: 220)
             }
-            .buttonStyle(.plain)
-            .disabled(model.alertCount == 0)
         }
         .padding(14)
         .background(cardBackground)
@@ -141,21 +159,6 @@ private struct StatusMenuView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                FooterButton(title: "Reveal Event Log", systemImage: "doc.text.magnifyingglass") {
-                    model.revealEventLog()
-                }
-                FooterButton(title: "Copy CLI Example", systemImage: "terminal") {
-                    model.copyCLIExample()
-                }
-            }
-
-            if !model.accessibilityTrusted {
-                FooterButton(title: "Open Accessibility Settings", systemImage: "hand.raised.fill") {
-                    model.openAccessibilitySettings()
-                }
-            }
-
             if let lastErrorMessage = model.lastErrorMessage {
                 Text(lastErrorMessage)
                     .font(.system(size: 11))
@@ -166,11 +169,120 @@ private struct StatusMenuView: View {
             HStack {
                 Text("Last refresh \(model.lastUpdatedAt.formatted(date: .omitted, time: .shortened))")
                 Spacer()
-                Text("Ghostty • iTerm • Terminal")
+                Text("\(AppVersion.displayString) · Jump: Ctrl+Option+Cmd+O")
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.56))
         }
+    }
+
+    private var settingsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                IconButton(systemImage: "chevron.left") {
+                    showingSettings = false
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Settings")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Small knobs for your control tower.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.68))
+                }
+
+                Spacer()
+            }
+
+            settingsCard
+
+            VStack(alignment: .leading, spacing: 10) {
+                SettingsRow(
+                    title: "Launch at login",
+                    subtitle: "Start overwatchr automatically after you sign in."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { model.launchAtLoginEnabled },
+                        set: { model.setLaunchAtLoginEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                }
+
+                SettingsRow(
+                    title: "Alert chime",
+                    subtitle: "Play a small Glass chime when a fresh ping arrives."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { model.alertChimeEnabled },
+                        set: { model.setAlertChimeEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                }
+
+                SettingsRow(
+                    title: "Accessibility",
+                    subtitle: model.accessibilityTrusted ? "Window focusing permissions look good." : "Needed for reliable terminal focusing."
+                ) {
+                    Button("Open") {
+                        model.openAccessibilitySettings()
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.white)
+                }
+            }
+            .padding(14)
+            .background(cardBackground)
+
+            if let launchAtLoginMessage = model.launchAtLoginMessage {
+                Text(launchAtLoginMessage)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.68))
+            }
+
+            Spacer()
+
+            HStack {
+                Button("Quit Overwatchr") {
+                    model.quit()
+                }
+                .foregroundStyle(Color.white.opacity(0.86))
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(AppVersion.displayString)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.46))
+            }
+        }
+    }
+
+    private var settingsCard: some View {
+        HStack(spacing: 12) {
+            if let image = BrandAssets.logoImage() {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("overwatchr")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("Tracks agent pings and brings the right terminal forward.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.7))
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(cardBackground)
     }
 
     private var cardBackground: some View {
@@ -183,15 +295,44 @@ private struct StatusMenuView: View {
     }
 }
 
+private struct EmptyQueueCard: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "moon.stars.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.72))
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Airspace clear")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text("When an agent needs input or hits an error, it will land here.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.66))
+            }
+
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+        )
+    }
+}
+
 private struct AlertRow: View {
     let alert: AgentEvent
+    let isNewest: Bool
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            content
-        }
-        .buttonStyle(.plain)
+        content
     }
 
     private var statusColor: Color {
@@ -207,17 +348,25 @@ private struct AlertRow: View {
     }
 
     private var content: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 10, height: 10)
-                .padding(.top, 6)
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(statusColor.opacity(0.18))
+                .frame(width: 34, height: 34)
+                .overlay {
+                    Image(systemName: alert.status == .error ? "exclamationmark.triangle.fill" : "ellipsis.message.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(statusColor)
+                }
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 6) {
                 titleRow
                 subtitleRow
                 metadataRow
             }
+
+            Spacer(minLength: 8)
+
+            jumpButton
         }
         .padding(12)
         .background(
@@ -227,11 +376,25 @@ private struct AlertRow: View {
     }
 
     private var titleRow: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(alert.displayName)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            Spacer()
+
+            if isNewest {
+                Text("NEW")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(BrandPalette.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(BrandPalette.accent.opacity(0.14))
+                    )
+            }
+
+            Spacer(minLength: 6)
+
             Text(alert.status.label.uppercased())
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundStyle(statusColor)
@@ -246,37 +409,28 @@ private struct AlertRow: View {
     }
 
     private var metadataRow: some View {
-        HStack {
+        HStack(spacing: 10) {
             Label(terminalLabel, systemImage: "terminal")
-            Spacer()
             Text(timestampLabel)
+            Spacer(minLength: 0)
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(Color.white.opacity(0.5))
     }
-}
 
-private struct FooterButton: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
+    private var jumpButton: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                Text(title)
-            }
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.07))
-            )
+            Image(systemName: "arrow.up.forward.app.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(BrandPalette.accent.opacity(0.22))
+                )
         }
         .buttonStyle(.plain)
+        .help("Jump to this terminal")
     }
 }
 
@@ -285,43 +439,126 @@ private struct StatusItemLabel: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            if let image = BrandAssets.statusTemplateImage() {
+            if let image = BrandAssets.toolbarIconImage() {
                 Image(nsImage: image)
-                    .renderingMode(.template)
-            } else {
-                Image(systemName: alertCount == 0 ? "eye.fill" : "bolt.fill")
-                    .font(.system(size: 12, weight: .semibold))
+                    .renderingMode(.original)
+                    .interpolation(.high)
+                    .frame(width: 18, height: 14)
             }
 
             if alertCount > 0 {
                 Text("\(alertCount)")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .foregroundStyle(.white)
             }
         }
         .accessibilityLabel("overwatchr \(alertCount) active alerts")
     }
 }
 
-private struct StatusPill: View {
-    let count: Int
+private struct IconButton: View {
+    let systemImage: String
+    let action: () -> Void
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
-                .monospacedDigit()
-            Text(count == 1 ? "alert" : "alerts")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.white.opacity(0.68))
-                .textCase(.uppercase)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle()
+                        .fill(Color.white.opacity(0.08))
+                )
         }
-        .frame(width: 62, height: 62)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(BrandPalette.accent.opacity(count == 0 ? 0.10 : 0.18))
-        )
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsRow<Accessory: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let accessory: Accessory
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.66))
+            }
+            Spacer()
+            accessory
+        }
+    }
+}
+
+private struct SettingsView: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                if let image = BrandAssets.logoImage() {
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Overwatchr Settings")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                    Text("Tiny controls for your terminal control tower.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Toggle(isOn: Binding(
+                get: { model.launchAtLoginEnabled },
+                set: { model.setLaunchAtLoginEnabled($0) }
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Launch at login")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Start overwatchr automatically after you sign in.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label(model.accessibilityTrusted ? "Accessibility access looks good." : "Accessibility access is still needed for reliable window focusing.", systemImage: model.accessibilityTrusted ? "checkmark.circle.fill" : "hand.raised.fill")
+                    .foregroundStyle(model.accessibilityTrusted ? .green : .orange)
+
+                Button("Open Accessibility Settings") {
+                    model.openAccessibilitySettings()
+                }
+            }
+
+            if let launchAtLoginMessage = model.launchAtLoginMessage {
+                Text(launchAtLoginMessage)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            HStack {
+                Button("Quit Overwatchr") {
+                    model.quit()
+                }
+                Spacer()
+            }
+        }
+        .padding(20)
     }
 }
 #endif

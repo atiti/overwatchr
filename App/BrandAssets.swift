@@ -11,14 +11,13 @@ enum BrandPalette {
 }
 
 enum BrandAssets {
-    static func statusTemplateImage() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "menu_bar_template", withExtension: "png"),
+    static func toolbarIconImage() -> NSImage? {
+        guard let url = Bundle.module.url(forResource: "toolbar_native", withExtension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }
 
-        image.isTemplate = true
-        image.size = NSSize(width: 18, height: 18)
+        image.size = NSSize(width: 18, height: 14)
         return image
     }
 
@@ -31,4 +30,3 @@ enum BrandAssets {
     }
 }
 #endif
-

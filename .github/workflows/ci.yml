@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: macos-14
@@ -15,4 +19,13 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
-
+      - name: Build release binaries
+        run: swift build -c release
+      - name: Smoke hook installer
+        run: |
+          TMP_DIR="$(mktemp -d)"
+          ./.build/release/overwatchr hooks install all --scope project --dir "$TMP_DIR"
+      - name: Package app bundle
+        run: |
+          chmod +x install.sh scripts/build_app_bundle.sh
+          CREATE_ARCHIVE=1 scripts/build_app_bundle.sh

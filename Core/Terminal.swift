@@ -95,6 +95,46 @@ public enum TerminalApplication: Equatable, Sendable {
         }
     }
 
+    public var appleScriptWindowMenuItemsCommand: String? {
+        switch self {
+        case .ghostty:
+            return """
+            tell application "System Events"
+                tell process "Ghostty"
+                    get title of every menu item of menu 1 of menu bar item "Window" of menu bar 1
+                end tell
+            end tell
+            """
+        case .iTerm, .terminal, .other:
+            return nil
+        }
+    }
+
+    public func appleScriptSelectWindowMenuItemCommand(title: String) -> String? {
+        let escapedTitle = title
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+
+        switch self {
+        case .ghostty:
+            return """
+            tell application "Ghostty"
+                activate
+            end tell
+            delay 0.05
+            tell application "System Events"
+                tell process "Ghostty"
+                    click menu item "\(escapedTitle)" of menu 1 of menu bar item "Window" of menu bar 1
+                    return "matched"
+                end tell
+            end tell
+            return ""
+            """
+        case .iTerm, .terminal, .other:
+            return nil
+        }
+    }
+
     public func appleScriptWindowFocusCommand(matching title: String) -> String? {
         let escapedTitle = title
             .replacingOccurrences(of: "\\", with: "\\\\")

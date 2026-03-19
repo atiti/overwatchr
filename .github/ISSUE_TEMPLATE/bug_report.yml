@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible problem in Overwatchr
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Steps, commands, and tool setup needed to reproduce the issue
+      placeholder: |
+        1. Launch Overwatchr
+        2. Run codex with hooks enabled
+        3. Wait for Stop hook
+        4. Observe...
+    validations:
+      required: true
+  - type: dropdown
+    id: terminal
+    attributes:
+      label: Terminal
+      options:
+        - Ghostty
+        - iTerm
+        - Terminal.app
+        - Other
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: macOS version, Overwatchr version, and agent tool version
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant output or attach screenshots

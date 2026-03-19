@@ -20,8 +20,8 @@ final class GlobalHotKeyMonitor {
     private var action: () -> Void = {}
 
     func register(
-        keyCode: UInt32 = UInt32(kVK_ANSI_A),
-        modifiers: UInt32 = UInt32(cmdKey | shiftKey),
+        keyCode: UInt32 = UInt32(kVK_ANSI_O),
+        modifiers: UInt32 = UInt32(controlKey | optionKey | cmdKey),
         handler: @escaping () -> Void
     ) throws {
         unregister()
