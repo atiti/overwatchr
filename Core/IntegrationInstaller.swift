@@ -269,7 +269,10 @@ public struct IntegrationInstaller {
         hooks[event] = groups
         root["hooks"] = hooks
 
-        let data = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
+        let data = try JSONSerialization.data(
+            withJSONObject: root,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )
         try data.write(to: url, options: .atomic)
     }
 
