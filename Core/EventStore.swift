@@ -85,20 +85,21 @@ public struct EventStore: Sendable {
         }
 
         let decoder = JSONDecoder()
-        return try string
-            .split(whereSeparator: \.isNewline)
-            .map(String.init)
-            .filter { !$0.isEmpty }
-            .map { line in
-                guard let lineData = line.data(using: .utf8) else {
-                    throw EventStoreError.invalidEncoding
-                }
-                do {
-                    return try decoder.decode(AgentEvent.self, from: lineData)
-                } catch {
-                    throw EventStoreError.invalidEventLine(line)
-                }
+        var events: [AgentEvent] = []
+
+        for line in string.split(whereSeparator: \.isNewline).map(String.init).filter({ !$0.isEmpty }) {
+            guard let lineData = line.data(using: .utf8) else {
+                throw EventStoreError.invalidEncoding
             }
+
+            do {
+                events.append(try decoder.decode(AgentEvent.self, from: lineData))
+            } catch {
+                // Keep the watcher resilient if a single line in the append-only log gets corrupted.
+                continue
+            }
+        }
+
+        return events
     }
 }
-
