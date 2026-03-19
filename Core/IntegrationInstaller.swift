@@ -75,6 +75,7 @@ public struct IntegrationInstaller {
         try installJSONHook(
             at: hooksURL,
             event: "Stop",
+            replacementCommandSuffix: "hook-run codex",
             commandHook: [
                 "type": "command",
                 "command": command,
@@ -110,6 +111,7 @@ public struct IntegrationInstaller {
         try installJSONHook(
             at: settingsURL,
             event: "Stop",
+            replacementCommandSuffix: "hook-run claude",
             commandHook: [
                 "type": "command",
                 "command": command,
@@ -120,6 +122,7 @@ public struct IntegrationInstaller {
         try installJSONHook(
             at: settingsURL,
             event: "SessionEnd",
+            replacementCommandSuffix: "hook-run claude",
             commandHook: [
                 "type": "command",
                 "command": command,
@@ -226,12 +229,31 @@ public struct IntegrationInstaller {
     private func installJSONHook(
         at url: URL,
         event: String,
+        replacementCommandSuffix: String,
         commandHook: [String: Any]
     ) throws {
         var root = try loadJSONObject(from: url)
         var hooks = root["hooks"] as? [String: Any] ?? [:]
         var groups = hooks[event] as? [[String: Any]] ?? []
         let command = commandHook["command"] as? String
+
+        groups = groups.compactMap { group in
+            var updatedGroup = group
+            let handlers = group["hooks"] as? [[String: Any]] ?? []
+            let filteredHandlers = handlers.filter { handler in
+                guard let existingCommand = handler["command"] as? String else {
+                    return true
+                }
+                return !existingCommand.contains(replacementCommandSuffix)
+            }
+
+            guard !filteredHandlers.isEmpty else {
+                return nil
+            }
+
+            updatedGroup["hooks"] = filteredHandlers
+            return updatedGroup
+        }
 
         let alreadyInstalled = groups.contains { group in
             let handlers = group["hooks"] as? [[String: Any]] ?? []

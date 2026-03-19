@@ -66,6 +66,48 @@ final class IntegrationInstallerTests: XCTestCase {
         XCTAssertNotNil(hooks?["SessionEnd"])
     }
 
+    func testInstallReplacesExistingOverwatchrCommandPaths() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let settingsURL = root.appendingPathComponent(".claude/settings.local.json")
+        try FileManager.default.createDirectory(at: settingsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let existing = """
+        {
+          "hooks": {
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "/tmp/old/overwatchr hook-run claude"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+        """
+        try existing.write(to: settingsURL, atomically: true, encoding: .utf8)
+
+        let installer = IntegrationInstaller(fileManager: .default, userHomeDirectoryURL: root.appendingPathComponent("home", isDirectory: true))
+        _ = try installer.install(
+            tool: .claude,
+            scope: .project,
+            projectDirectoryURL: root,
+            overwatchrBinaryPath: "/usr/local/bin/overwatchr"
+        )
+
+        let data = try Data(contentsOf: settingsURL)
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let hooks = object?["hooks"] as? [String: Any]
+        let stopGroups = hooks?["Stop"] as? [[String: Any]] ?? []
+        let commands = stopGroups
+            .flatMap { $0["hooks"] as? [[String: Any]] ?? [] }
+            .compactMap { $0["command"] as? String }
+
+        XCTAssertEqual(commands, ["/usr/local/bin/overwatchr hook-run claude"])
+    }
+
     func testOpenCodeInstallWritesPlugin() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let installer = IntegrationInstaller(fileManager: .default, userHomeDirectoryURL: root.appendingPathComponent("home", isDirectory: true))
