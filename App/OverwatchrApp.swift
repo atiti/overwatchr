@@ -198,6 +198,17 @@ private struct StatusMenuView: View {
             settingsCard
 
             VStack(alignment: .leading, spacing: 10) {
+                if let shellStatus = model.shellIntegrationStatus {
+                    SettingsRow(
+                        title: "Shell title sync",
+                        subtitle: shellStatus.installed
+                            ? "Installed for \(shellStatus.shell.rawValue). New terminal tabs will export OVERWATCHR_TITLE."
+                            : "Not installed for \(shellStatus.shell.rawValue). Ghostty jumps work best with the managed shell snippet."
+                    ) {
+                        ShellStatusBadge(installed: shellStatus.installed)
+                    }
+                }
+
                 SettingsRow(
                     title: "Launch at login",
                     subtitle: "Start overwatchr automatically after you sign in."
@@ -304,6 +315,28 @@ private struct StatusMenuView: View {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(BrandPalette.border, lineWidth: 1)
             )
+    }
+}
+
+private struct ShellStatusBadge: View {
+    let installed: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(installed ? Color.green.opacity(0.9) : Color.orange.opacity(0.9))
+                .frame(width: 7, height: 7)
+
+            Text(installed ? "Installed" : "Missing")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.88))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
     }
 }
 

@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var launchAtLoginEnabled = false
     @Published private(set) var alertChimeEnabled = false
     @Published private(set) var jumpSoundEnabled = true
+    @Published private(set) var shellIntegrationStatus: ShellIntegrationStatus?
     @Published var launchAtLoginMessage: String?
 
     let store: EventStore
@@ -22,6 +23,7 @@ final class AppModel: ObservableObject {
     private let seenStore: SeenAlertStore
     private let focusEngine = FocusEngine()
     private let hotKeyMonitor = GlobalHotKeyMonitor()
+    private let shellIntegrationInstaller = ShellIntegrationInstaller()
     private var hasStarted = false
     private var currentAlerts: [AgentEvent] = []
     private var seenLedger: SeenAlertLedger
@@ -55,6 +57,7 @@ final class AppModel: ObservableObject {
         hasStarted = true
         refreshAccessibilityStatus()
         refreshLaunchAtLoginStatus()
+        refreshShellIntegrationStatus()
         watcher.start()
 
         do {
@@ -162,6 +165,16 @@ final class AppModel: ObservableObject {
 
     private func refreshLaunchAtLoginStatus() {
         launchAtLoginEnabled = SMAppService.mainApp.status == .enabled
+    }
+
+    private func refreshShellIntegrationStatus() {
+        guard let shellPath = ProcessInfo.processInfo.environment["SHELL"],
+              let shell = ShellProfile(shellPath: shellPath) else {
+            shellIntegrationStatus = nil
+            return
+        }
+
+        shellIntegrationStatus = shellIntegrationInstaller.status(for: shell)
     }
 
     private func applyAlertUpdate(_ currentAlerts: [AgentEvent], newEvents: [AgentEvent] = []) {

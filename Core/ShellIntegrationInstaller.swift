@@ -42,6 +42,13 @@ public struct ShellIntegrationInstallResult: Sendable {
     public let notes: [String]
 }
 
+public struct ShellIntegrationStatus: Sendable {
+    public let shell: ShellProfile
+    public let rcFile: URL
+    public let snippetFile: URL
+    public let installed: Bool
+}
+
 public struct ShellIntegrationInstaller {
     private let fileManager: FileManager
     private let userHomeDirectoryURL: URL
@@ -74,10 +81,25 @@ public struct ShellIntegrationInstaller {
         )
     }
 
+    public func status(for shell: ShellProfile) -> ShellIntegrationStatus {
+        let rcURL = userHomeDirectoryURL.appendingPathComponent(shell.rcRelativePath)
+        let snippetURL = userHomeDirectoryURL.appendingPathComponent(shell.snippetRelativePath)
+        let sourceLine = expectedSourceLine(for: snippetURL)
+        let snippetExists = fileManager.fileExists(atPath: snippetURL.path)
+        let rcContents = (try? String(contentsOf: rcURL, encoding: .utf8)) ?? ""
+        let installed = snippetExists && rcContents.contains(sourceLine)
+
+        return ShellIntegrationStatus(
+            shell: shell,
+            rcFile: rcURL,
+            snippetFile: snippetURL,
+            installed: installed
+        )
+    }
+
     private func installSourceLine(into rcURL: URL, snippetURL: URL) throws {
         let existing = (try? String(contentsOf: rcURL, encoding: .utf8)) ?? ""
-        let relativeSnippetPath = snippetRelativePath(for: snippetURL)
-        let sourceLine = #"[[ -f "$HOME/\#(relativeSnippetPath)" ]] && source "$HOME/\#(relativeSnippetPath)""#
+        let sourceLine = expectedSourceLine(for: snippetURL)
         let marker = "# Added by overwatchr"
 
         if existing.contains(sourceLine) {
@@ -107,6 +129,11 @@ public struct ShellIntegrationInstaller {
             return String(snippetPath.dropFirst(homePath.count + 1))
         }
         return snippetPath
+    }
+
+    private func expectedSourceLine(for snippetURL: URL) -> String {
+        let relativeSnippetPath = snippetRelativePath(for: snippetURL)
+        return #"[[ -f "$HOME/\#(relativeSnippetPath)" ]] && source "$HOME/\#(relativeSnippetPath)""#
     }
 }
 
