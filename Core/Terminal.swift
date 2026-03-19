@@ -306,7 +306,25 @@ public enum TerminalApplication: Equatable, Sendable {
             end tell
             """
         case .terminal:
-            return nil
+            return """
+            tell application "Terminal"
+                activate
+                set query to "\(escapedTitle)"
+                repeat with aWindow in windows
+                    set windowName to ""
+                    try
+                        set windowName to (name of aWindow as text)
+                    on error
+                        set windowName to ""
+                    end try
+                    if windowName contains query then
+                        set index of aWindow to 1
+                        return "matched"
+                    end if
+                end repeat
+                return ""
+            end tell
+            """
         case .other:
             return nil
         }

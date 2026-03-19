@@ -95,16 +95,12 @@ public final class FocusEngine {
         }
 
         for title in titleQueries where !title.isEmpty {
-            if terminal == .ghostty, runTitleMatchAppleScript(for: terminal, title: title) {
+            if runTitleMatchAppleScript(for: terminal, title: title) {
                 return
             }
 
             let focused = try focusWindow(of: app, matching: title)
             if focused {
-                return
-            }
-
-            if runTitleMatchAppleScript(for: terminal, title: title) {
                 return
             }
         }
