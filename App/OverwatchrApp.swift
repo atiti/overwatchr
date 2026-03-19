@@ -156,8 +156,8 @@ private struct StatusMenuView: View {
             if model.alerts.isEmpty {
                 EmptyQueueCard()
             } else {
-                ScrollView {
-                    VStack(spacing: 10) {
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVStack(spacing: 10) {
                         ForEach(model.alerts) { alert in
                             AlertRow(
                                 alert: alert,
@@ -170,7 +170,7 @@ private struct StatusMenuView: View {
                     }
                     .padding(.vertical, 2)
                 }
-                .frame(minHeight: 96, maxHeight: 220)
+                .frame(minHeight: 132, maxHeight: 300)
             }
         }
         .padding(14)
@@ -408,6 +408,23 @@ private struct AlertRow: View {
         alert.terminal?.capitalized ?? "Terminal"
     }
 
+    private var primaryTitle: String {
+        alert.project ?? alert.title ?? alert.agentID
+    }
+
+    private var secondaryTitle: String? {
+        if let title = alert.title, title != primaryTitle {
+            return title
+        }
+        if let project = alert.project, project != primaryTitle {
+            return project
+        }
+        if alert.agentID != primaryTitle {
+            return alert.agentID
+        }
+        return nil
+    }
+
     private var timestampLabel: String {
         Date(timeIntervalSince1970: alert.timestamp).formatted(.dateTime.hour().minute())
     }
@@ -442,9 +459,10 @@ private struct AlertRow: View {
 
     private var titleRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(alert.displayName)
-                .font(.system(size: 13, weight: .semibold))
+            Text(primaryTitle)
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
+                .lineLimit(2)
 
             if isNewest {
                 Text("NEW")
@@ -467,10 +485,15 @@ private struct AlertRow: View {
     }
 
     private var subtitleRow: some View {
-        Text(alert.displaySubtitle)
-            .font(.system(size: 12))
-            .foregroundStyle(Color.white.opacity(0.74))
-            .lineLimit(2)
+        Group {
+            if let secondaryTitle {
+                Text(secondaryTitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.74))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+        }
     }
 
     private var metadataRow: some View {
