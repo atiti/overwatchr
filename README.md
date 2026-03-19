@@ -68,6 +68,7 @@ scripts/build_app_bundle.sh
 
 ```bash
 overwatchr hooks install all --scope user
+overwatchr shell install --shell zsh
 ```
 
 That sets up:
@@ -75,6 +76,7 @@ That sets up:
 - Codex CLI via `~/.codex/config.toml` and `~/.codex/hooks.json`
 - Claude Code via `~/.claude/settings.json`
 - OpenCode via `~/.config/opencode/plugins/overwatchr.js`
+- interactive shell title syncing via `~/.config/overwatchr/shell.zsh`
 
 Project-local setup also works:
 
@@ -120,6 +122,14 @@ You usually do not call these by hand. The generated hook configs call them for 
 - Terminal.app
 
 Overwatchr now prefers exact `tty` session matching for iTerm and Terminal.app when the hook process can see a controlling terminal, then falls back to title matching. Ghostty still uses Accessibility window matching plus the `Window` menu fallback because its scripting surface is more limited.
+
+For Ghostty and other terminals that honor standard OSC title sequences, install the shell integration too:
+
+```bash
+overwatchr shell install --shell zsh
+```
+
+That keeps `OVERWATCHR_TITLE` and the terminal tab title aligned to the current project directory, which makes Codex alerts much easier to jump back to.
 
 ## Development
 

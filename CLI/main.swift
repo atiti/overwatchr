@@ -41,6 +41,8 @@ struct OverwatchrCLI {
                 print("Recorded \(event.status.rawValue) for \(event.agentID)")
             case "hooks":
                 try runHooksCommand(arguments: Array(arguments.dropFirst()))
+            case "shell":
+                try runShellCommand(arguments: Array(arguments.dropFirst()))
             case "hook-run":
                 try runHookBridge(arguments: Array(arguments.dropFirst()))
             case "--help", "-h", "help":
@@ -172,11 +174,51 @@ struct OverwatchrCLI {
         }
     }
 
+    private static func runShellCommand(arguments: [String]) throws {
+        let parsed = try parseCommand(["shell"] + arguments)
+        guard let subcommand = parsed.positionals.first else {
+            throw CLIError.usage("Missing shell subcommand.")
+        }
+
+        switch subcommand {
+        case "install":
+            try installShellIntegration(from: parsed)
+        default:
+            throw CLIError.usage("Unknown shell subcommand: \(subcommand)")
+        }
+    }
+
+    private static func installShellIntegration(from parsed: ParsedCommand) throws {
+        let shell = try parseShell(parsed.options["shell"] ?? "auto")
+        let result = try ShellIntegrationInstaller().install(shell: shell)
+
+        print("Installed \(result.shell.rawValue) shell integration:")
+        print("  - \(result.rcFile.path)")
+        print("  - \(result.snippetFile.path)")
+        for note in result.notes {
+            print("    \(note)")
+        }
+    }
+
     private static func parseScope(_ rawValue: String) throws -> IntegrationScope {
         guard let scope = IntegrationScope(rawValue: rawValue) else {
             throw CLIError.invalidValue(option: "scope", value: rawValue)
         }
         return scope
+    }
+
+    private static func parseShell(_ rawValue: String) throws -> ShellProfile {
+        if rawValue == "auto" {
+            if let shell = ShellProfile(shellPath: ProcessInfo.processInfo.environment["SHELL"] ?? "") {
+                return shell
+            }
+            throw CLIError.usage("Could not detect the current shell. Pass --shell zsh or --shell bash.")
+        }
+
+        guard let shell = ShellProfile(rawValue: rawValue) else {
+            throw CLIError.invalidValue(option: "shell", value: rawValue)
+        }
+        return shell
     }
 
     private static func resolvedExecutablePath() -> String {
@@ -190,11 +232,13 @@ struct OverwatchrCLI {
       overwatchr done --agent AGENT [--project PROJECT]
       overwatchr error --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--tty TTY] [--title TITLE]
       overwatchr hooks install <codex|claude|opencode|all> [--scope project|user] [--dir PATH]
+      overwatchr shell install [--shell auto|zsh|bash]
       overwatchr hook-run <codex|claude|opencode>
 
     Examples:
       overwatchr alert --agent copy --project landing --terminal ghostty --tty /dev/ttys012 --title "landing:copy"
       overwatchr hooks install codex --scope project
       overwatchr hooks install all --scope user
+      overwatchr shell install --shell zsh
     """
 }
