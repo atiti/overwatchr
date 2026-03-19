@@ -64,11 +64,31 @@ final class AppModel: ObservableObject {
     }
 
     func focusNextAlert() {
-        guard let alert = alerts.first else {
+        let pendingAlerts = alerts
+        guard !pendingAlerts.isEmpty else {
             return
         }
 
-        focus(alert)
+        var skippedCount = 0
+        var lastError: String?
+
+        for alert in pendingAlerts {
+            do {
+                try focusEngine.focus(event: alert)
+                markSeen(alert)
+                lastErrorMessage = skippedCount == 0 ? nil : "Skipped \(skippedCount) stale alert\(skippedCount == 1 ? "" : "s") before jumping."
+                return
+            } catch {
+                markSeen(alert)
+                skippedCount += 1
+                lastError = error.localizedDescription
+            }
+        }
+
+        refreshAccessibilityStatus()
+        if let lastError {
+            lastErrorMessage = "Skipped \(skippedCount) alert\(skippedCount == 1 ? "" : "s"), but none could be focused. Last issue: \(lastError)"
+        }
     }
 
     func focus(_ event: AgentEvent) {
