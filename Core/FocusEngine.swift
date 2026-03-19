@@ -207,10 +207,10 @@ public final class FocusEngine {
            let scriptSource = terminal.appleScriptSelectWindowMenuItemCommand(title: matchedMenuItem),
            let output = executeAppleScript(scriptSource)?.stringValue,
            output == "matched" {
-            return terminal != .ghostty || frontWindowTitle(for: terminal).map {
-                WindowTitleMatcher.score(candidate: $0, query: matchedMenuItem) != nil
-                    || WindowTitleMatcher.score(candidate: $0, query: title) != nil
-            } == true
+            return terminal != .ghostty || frontWindowMatchesAnyTitle(
+                for: terminal,
+                candidates: [matchedMenuItem, title]
+            )
         }
 
         guard let scriptSource = terminal.appleScriptWindowFocusCommand(matching: title) else {
@@ -258,6 +258,31 @@ public final class FocusEngine {
         return executeAppleScript(scriptSource)?
             .stringValue?
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func frontWindowMatchesAnyTitle(for terminal: TerminalApplication, candidates: [String]) -> Bool {
+        let normalizedCandidates = candidates
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !normalizedCandidates.isEmpty else {
+            return false
+        }
+
+        for attempt in 0..<5 {
+            if let frontWindowTitle = frontWindowTitle(for: terminal),
+               normalizedCandidates.contains(where: { candidate in
+                   WindowTitleMatcher.score(candidate: frontWindowTitle, query: candidate) != nil
+               }) {
+                return true
+            }
+
+            if attempt < 4 {
+                Thread.sleep(forTimeInterval: 0.15)
+            }
+        }
+
+        return false
     }
 
     private func executeAppleScript(_ source: String) -> NSAppleEventDescriptor? {

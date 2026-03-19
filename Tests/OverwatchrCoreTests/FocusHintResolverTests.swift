@@ -14,9 +14,9 @@ final class FocusHintResolverTests: XCTestCase {
         XCTAssertEqual(
             FocusHintResolver.queries(for: event),
             [
-                "espclaw",
+                "codex resume 019cf0bb-722c-7bf3-9ce3-66bca920e9b9",
                 "019cf0bb-722c-7bf3-9ce3-66bca920e9b9",
-                "codex resume 019cf0bb-722c-7bf3-9ce3-66bca920e9b9"
+                "espclaw",
             ]
         )
     }

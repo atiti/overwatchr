@@ -4,19 +4,21 @@ enum FocusHintResolver {
     static func queries(for event: AgentEvent) -> [String] {
         var queries: [String] = []
 
-        append(event.title, to: &queries)
-        append(event.project, to: &queries)
-
         guard let sessionIdentifier = sessionIdentifier(from: event.agentID) else {
+            append(event.title, to: &queries)
+            append(event.project, to: &queries)
             return queries
         }
-
-        append(sessionIdentifier, to: &queries)
 
         if TerminalApplication(name: event.terminal ?? "") == .ghostty,
            event.agentID.hasPrefix("codex-") {
             append("codex resume \(sessionIdentifier)", to: &queries)
+            append(sessionIdentifier, to: &queries)
         }
+
+        append(event.title, to: &queries)
+        append(event.project, to: &queries)
+        append(sessionIdentifier, to: &queries)
 
         return queries
     }
