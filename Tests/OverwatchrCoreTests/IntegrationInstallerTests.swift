@@ -64,6 +64,7 @@ final class IntegrationInstallerTests: XCTestCase {
         XCTAssertNotNil(hooks?["PreToolUse"])
         XCTAssertNotNil(hooks?["Stop"])
         XCTAssertNotNil(hooks?["SessionEnd"])
+        XCTAssertNotNil(hooks?["PermissionRequest"])
     }
 
     func testInstallReplacesExistingOverwatchrCommandPaths() throws {

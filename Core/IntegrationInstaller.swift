@@ -130,12 +130,23 @@ public struct IntegrationInstaller {
                 "statusMessage": "clearing overwatchr alert"
             ]
         )
+        try installJSONHook(
+            at: settingsURL,
+            event: "PermissionRequest",
+            replacementCommandSuffix: "hook-run claude",
+            commandHook: [
+                "type": "command",
+                "command": command,
+                "timeout": 5,
+                "statusMessage": "notifying overwatchr of permission prompt"
+            ]
+        )
 
         return IntegrationInstallResult(
             tool: .claude,
             scope: scope,
             files: [settingsURL],
-            notes: ["Claude Code Stop alerts and SessionEnd cleanup are installed."]
+            notes: ["Claude Code Stop alerts, SessionEnd cleanup, and PermissionRequest notifications are installed."]
         )
     }
 
