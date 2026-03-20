@@ -137,6 +137,59 @@ public enum TerminalApplication: Equatable, Sendable {
         """
     }
 
+    public var appleScriptFrontSessionTTYCommand: String? {
+        switch self {
+        case .ghostty:
+            return nil
+        case .iTerm:
+            return """
+            tell application "iTerm2"
+                try
+                    return tty of current session of current tab of front window
+                on error
+                    return ""
+                end try
+            end tell
+            """
+        case .terminal:
+            return """
+            tell application "Terminal"
+                try
+                    return tty of selected tab of front window
+                on error
+                    return ""
+                end try
+            end tell
+            """
+        case .other:
+            return nil
+        }
+    }
+
+    public var appleScriptFrontWorkingDirectoryBasenameCommand: String? {
+        switch self {
+        case .ghostty:
+            return """
+            tell application "Ghostty"
+                try
+                    set workingDirectoryPath to (working directory of focused terminal of selected tab of front window as text)
+                    if workingDirectoryPath contains "/" then
+                        set AppleScript's text item delimiters to "/"
+                        set basename to text item -1 of workingDirectoryPath
+                        set AppleScript's text item delimiters to ""
+                        return basename
+                    end if
+                    return workingDirectoryPath
+                on error
+                    return ""
+                end try
+            end tell
+            """
+        case .iTerm, .terminal, .other:
+            return nil
+        }
+    }
+
     public func appleScriptSelectWindowMenuItemCommand(title: String) -> String? {
         let escapedTitle = title
             .replacingOccurrences(of: "\\", with: "\\\\")

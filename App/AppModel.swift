@@ -216,11 +216,13 @@ final class AppModel: ObservableObject {
     private func applyAlertUpdate(_ currentAlerts: [AgentEvent], newEvents: [AgentEvent] = []) {
         refreshAccessibilityStatus()
         self.currentAlerts = currentAlerts
+        let incomingAttention = newEvents.filter(\.status.requiresAttention)
+        autoAcknowledgeFrontmostAttention(incomingAttention)
+
         alerts = seenLedger.visibleAlerts(from: currentAlerts)
         temporarilySkippedAgentIDs.formIntersection(Set(alerts.map(\.agentID)))
         lastUpdatedAt = Date()
 
-        let incomingAttention = newEvents.filter(\.status.requiresAttention)
         let unseenIncomingAttention = seenLedger.visibleAlerts(from: incomingAttention)
         if alertChimeEnabled, !unseenIncomingAttention.isEmpty {
             NSSound(named: NSSound.Name("Glass"))?.play()
@@ -231,6 +233,23 @@ final class AppModel: ObservableObject {
         seenLedger.markSeen(event)
         alerts = seenLedger.visibleAlerts(from: currentAlerts)
         saveSeenLedger(or: "Focused the alert, but could not save seen-state")
+    }
+
+    private func autoAcknowledgeFrontmostAttention(_ events: [AgentEvent]) {
+        let matchingEvents = events.filter { event in
+            guard let terminal = event.terminal,
+                  let context = focusEngine.frontmostContext(for: terminal) else {
+                return false
+            }
+            return FrontmostSessionMatcher.matches(event: event, context: context)
+        }
+
+        guard !matchingEvents.isEmpty else {
+            return
+        }
+
+        seenLedger.markSeen(matchingEvents)
+        saveSeenLedger(or: "Auto-acknowledged the frontmost alert, but could not save seen-state")
     }
 
     private func playJumpSoundIfEnabled() {

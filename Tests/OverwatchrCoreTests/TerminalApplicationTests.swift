@@ -18,4 +18,18 @@ final class TerminalApplicationTests: XCTestCase {
             matchingWorkingDirectoryBasename: "espclaw"
         ))
     }
+
+    func testGhosttyExposesFrontWorkingDirectoryScript() {
+        let script = TerminalApplication.ghostty.appleScriptFrontWorkingDirectoryBasenameCommand
+
+        XCTAssertNotNil(script)
+        XCTAssertTrue(script?.contains("working directory of focused terminal of selected tab of front window") == true)
+    }
+
+    func testITermExposesFrontSessionTTYScript() {
+        let script = TerminalApplication.iTerm.appleScriptFrontSessionTTYCommand
+
+        XCTAssertNotNil(script)
+        XCTAssertTrue(script?.contains("tty of current session of current tab of front window") == true)
+    }
 }

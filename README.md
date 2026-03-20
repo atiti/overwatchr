@@ -99,6 +99,7 @@ Events are appended to `~/.overwatchr/events.jsonl`.
 Queue behavior:
 
 - `alert` and `error` create or refresh an active alert for that agent
+- if the stopping session is already frontmost, overwatchr records the event but auto-marks it seen so you do not get a redundant queue item
 - opening an alert marks it `seen` locally, so it disappears until a newer event arrives
 - `done` clears it from the active stream
 - optional alert chime lives in the menu bar settings pane

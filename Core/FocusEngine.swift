@@ -42,6 +42,20 @@ public struct FocusTarget: Sendable {
 public final class FocusEngine {
     public init() {}
 
+    public func frontmostContext(for terminalName: String) -> FrontmostSessionContext? {
+        let terminal = TerminalApplication(name: terminalName)
+        guard let app = findRunningApplication(for: terminal), app.isActive else {
+            return nil
+        }
+
+        return FrontmostSessionContext(
+            terminalName: terminal.displayName,
+            ttyPath: frontSessionTTY(for: terminal),
+            title: frontWindowTitle(for: terminal),
+            workingDirectoryBasename: frontWorkingDirectoryBasename(for: terminal)
+        )
+    }
+
     public func focus(event: AgentEvent) throws {
         guard let terminal = event.terminal else {
             throw FocusError.missingTerminal
@@ -290,6 +304,27 @@ public final class FocusEngine {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private func frontSessionTTY(for terminal: TerminalApplication) -> String? {
+        guard let scriptSource = terminal.appleScriptFrontSessionTTYCommand else {
+            return nil
+        }
+
+        return executeAppleScript(scriptSource)?
+            .stringValue?
+            .sanitizedTTYPath
+    }
+
+    private func frontWorkingDirectoryBasename(for terminal: TerminalApplication) -> String? {
+        guard let scriptSource = terminal.appleScriptFrontWorkingDirectoryBasenameCommand else {
+            return nil
+        }
+
+        return executeAppleScript(scriptSource)?
+            .stringValue?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfBlank
+    }
+
     private func frontWindowMatchesAnyTitle(for terminal: TerminalApplication, candidates: [String]) -> Bool {
         let normalizedCandidates = candidates
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -326,6 +361,20 @@ public final class FocusEngine {
             return nil
         }
         return result
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    var sanitizedTTYPath: String? {
+        guard let trimmed = nilIfBlank, trimmed != "/dev/tty" else {
+            return nil
+        }
+        return trimmed
     }
 }
 #endif
