@@ -19,11 +19,7 @@ final class GlobalHotKeyMonitor {
     private var handlerRef: EventHandlerRef?
     private var action: () -> Void = {}
 
-    func register(
-        keyCode: UInt32 = UInt32(kVK_ANSI_O),
-        modifiers: UInt32 = UInt32(controlKey | optionKey | cmdKey),
-        handler: @escaping () -> Void
-    ) throws {
+    func register(configuration: HotKeyConfiguration = .default, handler: @escaping () -> Void) throws {
         unregister()
         action = handler
 
@@ -59,8 +55,8 @@ final class GlobalHotKeyMonitor {
 
         let hotKeyID = EventHotKeyID(signature: fourCharCode("OWHR"), id: 1)
         let registerStatus = RegisterEventHotKey(
-            keyCode,
-            modifiers,
+            configuration.keyCode,
+            configuration.modifiers,
             hotKeyID,
             GetApplicationEventTarget(),
             0,

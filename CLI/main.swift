@@ -43,6 +43,8 @@ struct OverwatchrCLI {
                 try runHooksCommand(arguments: Array(arguments.dropFirst()))
             case "shell":
                 try runShellCommand(arguments: Array(arguments.dropFirst()))
+            case "events":
+                try runEventsCommand(arguments: Array(arguments.dropFirst()))
             case "hook-run":
                 try runHookBridge(arguments: Array(arguments.dropFirst()))
             case "--help", "-h", "help":
@@ -174,6 +176,33 @@ struct OverwatchrCLI {
         }
     }
 
+    private static func runEventsCommand(arguments: [String]) throws {
+        let parsed = try parseCommand(["events"] + arguments)
+        guard let subcommand = parsed.positionals.first else {
+            throw CLIError.usage("Missing events subcommand.")
+        }
+
+        let maintenance = EventLogMaintenance()
+
+        switch subcommand {
+        case "stats":
+            let stats = try maintenance.stats()
+            printEventStats(stats)
+        case "compact":
+            let result = try maintenance.compact()
+            printRewriteResult("Compacted event log", result: result)
+        case "prune":
+            guard let rawAge = parsed.options["older-than"],
+                  let age = EventLogMaintenance.parseAge(rawAge) else {
+                throw CLIError.usage("Usage: overwatchr events prune --older-than 30d")
+            }
+            let result = try maintenance.prune(olderThan: age)
+            printRewriteResult("Pruned event log", result: result)
+        default:
+            throw CLIError.usage("Unknown events subcommand: \(subcommand)")
+        }
+    }
+
     private static func runShellCommand(arguments: [String]) throws {
         let parsed = try parseCommand(["shell"] + arguments)
         guard let subcommand = parsed.positionals.first else {
@@ -226,17 +255,53 @@ struct OverwatchrCLI {
         return URL(fileURLWithPath: executablePath).path
     }
 
+    private static func printEventStats(_ stats: EventLogStats) {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+
+        func formatTimestamp(_ timestamp: TimeInterval?) -> String {
+            guard let timestamp else {
+                return "n/a"
+            }
+            return formatter.string(from: Date(timeIntervalSince1970: timestamp))
+        }
+
+        print("Event log stats:")
+        print("  file: \(EventStore().fileURL.path)")
+        print("  size: \(stats.fileSizeBytes) bytes")
+        print("  valid events: \(stats.totalEvents)")
+        print("  malformed lines: \(stats.malformedLines)")
+        print("  unique agents: \(stats.uniqueAgents)")
+        print("  active alerts: \(stats.activeAlerts)")
+        print("  oldest event: \(formatTimestamp(stats.oldestTimestamp))")
+        print("  newest event: \(formatTimestamp(stats.newestTimestamp))")
+    }
+
+    private static func printRewriteResult(_ title: String, result: EventLogRewriteResult) {
+        print("\(title):")
+        print("  kept \(result.retainedCount) of \(result.originalCount) valid events")
+        print("  dropped \(result.droppedCount) line(s)")
+        print("  backup: \(result.backupFileURL.path)")
+    }
+
     private static let usage = """
     Usage:
       overwatchr alert --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--tty TTY] [--title TITLE]
       overwatchr done --agent AGENT [--project PROJECT]
       overwatchr error --agent AGENT [--project PROJECT] [--terminal TERMINAL] [--tty TTY] [--title TITLE]
+      overwatchr events stats
+      overwatchr events compact
+      overwatchr events prune --older-than 30d
       overwatchr hooks install <codex|claude|opencode|all> [--scope project|user] [--dir PATH]
       overwatchr shell install [--shell auto|zsh|bash]
       overwatchr hook-run <codex|claude|opencode>
 
     Examples:
       overwatchr alert --agent copy --project landing --terminal ghostty --tty /dev/ttys012 --title "landing:copy"
+      overwatchr events compact
+      overwatchr events prune --older-than 14d
       overwatchr hooks install codex --scope project
       overwatchr hooks install all --scope user
       overwatchr shell install --shell zsh

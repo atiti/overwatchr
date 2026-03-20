@@ -1,5 +1,6 @@
 #if os(macOS)
 import AppKit
+import Carbon
 import OverwatchrCore
 import SwiftUI
 
@@ -177,7 +178,7 @@ private struct StatusMenuView: View {
             HStack {
                 Text("Last refresh \(model.lastUpdatedAt.formatted(date: .omitted, time: .shortened))")
                 Spacer()
-                Text("\(AppVersion.displayString) · Jump: Ctrl+Option+Cmd+O")
+                Text("\(AppVersion.displayString) · Jump: \(model.hotKeyConfiguration.displayString)")
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.56))
@@ -206,6 +207,17 @@ private struct StatusMenuView: View {
             settingsCard
 
             VStack(alignment: .leading, spacing: 10) {
+                SettingsRow(
+                    title: "Jump shortcut",
+                    subtitle: "Choose the global key combo that teleports you to the next ping."
+                ) {
+                    ShortcutRecorder(
+                        configuration: model.hotKeyConfiguration,
+                        onChange: { model.setHotKeyConfiguration($0) },
+                        onReset: { model.resetHotKeyConfiguration() }
+                    )
+                }
+
                 if let shellStatus = model.shellIntegrationStatus {
                     SettingsRow(
                         title: "Shell title sync",
@@ -273,6 +285,12 @@ private struct StatusMenuView: View {
                     .foregroundStyle(Color.white.opacity(0.68))
             }
 
+            if let hotKeyMessage = model.hotKeyMessage {
+                Text(hotKeyMessage)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.orange.opacity(0.88))
+            }
+
             Spacer()
 
             HStack {
@@ -323,6 +341,72 @@ private struct StatusMenuView: View {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(BrandPalette.border, lineWidth: 1)
             )
+    }
+}
+
+private struct ShortcutRecorder: View {
+    let configuration: HotKeyConfiguration
+    let onChange: (HotKeyConfiguration) -> Void
+    let onReset: () -> Void
+
+    @State private var isRecording = false
+    @State private var eventMonitor: Any?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(isRecording ? "Press keys..." : configuration.displayString) {
+                toggleRecording()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.92))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isRecording ? Color.cyan.opacity(0.26) : Color.white.opacity(0.08))
+            )
+
+            Button("Reset") {
+                stopRecording()
+                onReset()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.72))
+        }
+        .onDisappear {
+            stopRecording()
+        }
+    }
+
+    private func toggleRecording() {
+        if isRecording {
+            stopRecording()
+            return
+        }
+
+        isRecording = true
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            if event.keyCode == UInt16(kVK_Escape) {
+                stopRecording()
+                return nil
+            }
+
+            guard let configuration = HotKeyConfiguration(event: event) else {
+                return nil
+            }
+
+            onChange(configuration)
+            stopRecording()
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+            self.eventMonitor = nil
+        }
+        isRecording = false
     }
 }
 

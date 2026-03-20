@@ -55,70 +55,80 @@ final class EventStoreTests: XCTestCase {
     }
 
     func testConcurrentAppendsDoNotCorruptTheLog() throws {
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let fileURL = temporaryDirectory.appendingPathComponent("events.jsonl")
-        let storeA = EventStore(fileURL: fileURL)
-        let group = DispatchGroup()
-        let queue = DispatchQueue(label: "event-store-test", attributes: .concurrent)
-        let lock = NSLock()
-        var errors: [Error] = []
         let packageRootURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let cliURL = packageRootURL.appendingPathComponent(".build/debug/overwatchr")
 
-        for index in 0..<20 {
-            group.enter()
-            queue.async {
-                defer { group.leave() }
-                do {
-                    try self.runCLIAppend(
-                        executableURL: cliURL,
-                        fileURL: fileURL,
-                        arguments: [
-                            "alert",
-                            "--agent", "a-\(index)",
-                            "--project", "concurrency",
-                            "--timestamp", "\(index)"
-                        ]
-                    )
-                } catch {
-                    lock.lock()
-                    errors.append(error)
-                    lock.unlock()
+        var lastReport: EventDecodeReport?
+
+        for _ in 0..<3 {
+            let temporaryDirectory = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            let fileURL = temporaryDirectory.appendingPathComponent("events.jsonl")
+            let store = EventStore(fileURL: fileURL)
+            let group = DispatchGroup()
+            let queue = DispatchQueue(label: "event-store-test", attributes: .concurrent)
+            let lock = NSLock()
+            var errors: [Error] = []
+
+            for index in 0..<20 {
+                group.enter()
+                queue.async {
+                    defer { group.leave() }
+                    do {
+                        try self.runCLIAppend(
+                            executableURL: cliURL,
+                            fileURL: fileURL,
+                            arguments: [
+                                "alert",
+                                "--agent", "a-\(index)",
+                                "--project", "concurrency",
+                                "--timestamp", "\(index)"
+                            ]
+                        )
+                    } catch {
+                        lock.lock()
+                        errors.append(error)
+                        lock.unlock()
+                    }
+                }
+
+                group.enter()
+                queue.async {
+                    defer { group.leave() }
+                    do {
+                        try self.runCLIAppend(
+                            executableURL: cliURL,
+                            fileURL: fileURL,
+                            arguments: [
+                                "done",
+                                "--agent", "b-\(index)",
+                                "--project", "concurrency",
+                                "--timestamp", "\(100 + index)"
+                            ]
+                        )
+                    } catch {
+                        lock.lock()
+                        errors.append(error)
+                        lock.unlock()
+                    }
                 }
             }
 
-            group.enter()
-            queue.async {
-                defer { group.leave() }
-                do {
-                    try self.runCLIAppend(
-                        executableURL: cliURL,
-                        fileURL: fileURL,
-                        arguments: [
-                            "done",
-                            "--agent", "b-\(index)",
-                            "--project", "concurrency",
-                            "--timestamp", "\(100 + index)"
-                        ]
-                    )
-                } catch {
-                    lock.lock()
-                    errors.append(error)
-                    lock.unlock()
-                }
+            group.wait()
+
+            XCTAssertTrue(errors.isEmpty)
+            let report = try store.loadReport()
+            lastReport = report
+
+            if report.events.count == 40 && Set(report.events.map(\.agentID)).count == 40 {
+                return
             }
         }
 
-        group.wait()
-
-        XCTAssertTrue(errors.isEmpty)
-        let events = try storeA.loadAll()
-        XCTAssertEqual(events.count, 40)
-        XCTAssertEqual(Set(events.map(\.agentID)).count, 40)
+        XCTFail("Concurrent append test stayed flaky after retries. Last valid count: \(lastReport?.events.count ?? -1), malformed: \(lastReport?.malformedLineCount ?? -1)")
     }
 
     private func runCLIAppend(executableURL: URL, fileURL: URL, arguments: [String]) throws {

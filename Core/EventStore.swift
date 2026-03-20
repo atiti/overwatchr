@@ -20,6 +20,11 @@ public struct EventReadBatch: Equatable, Sendable {
     public let nextOffset: UInt64
 }
 
+public struct EventDecodeReport: Equatable, Sendable {
+    public let events: [AgentEvent]
+    public let malformedLineCount: Int
+}
+
 public struct EventStore: Sendable {
     public static let defaultDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".overwatchr", isDirectory: true)
@@ -95,7 +100,13 @@ public struct EventStore: Sendable {
     }
 
     public func loadAll() throws -> [AgentEvent] {
-        try readEvents(from: 0).events
+        try loadReport().events
+    }
+
+    public func loadReport() throws -> EventDecodeReport {
+        try ensureStorage()
+        let data = try Data(contentsOf: fileURL)
+        return try decodeReport(from: data)
     }
 
     public func readEvents(from offset: UInt64) throws -> EventReadBatch {
@@ -114,16 +125,84 @@ public struct EventStore: Sendable {
             return EventReadBatch(events: [], nextOffset: nextOffset)
         }
 
-        return EventReadBatch(events: try decodeLines(from: data), nextOffset: nextOffset)
+        return EventReadBatch(events: try decodeReport(from: data).events, nextOffset: nextOffset)
     }
 
-    private func decodeLines(from data: Data) throws -> [AgentEvent] {
+    public func fileSizeBytes() throws -> UInt64 {
+        try ensureStorage()
+        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        return (attributes[.size] as? NSNumber)?.uint64Value ?? 0
+    }
+
+    public func replaceAll(with events: [AgentEvent]) throws {
+        try ensureStorage()
+
+        let descriptor = open(fileURL.path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+        guard descriptor >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        defer {
+            _ = flock(descriptor, LOCK_UN)
+            close(descriptor)
+        }
+
+        guard flock(descriptor, LOCK_EX) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        var data = Data()
+
+        for event in events {
+            data.append(try encoder.encode(event))
+            guard let lineBreak = "\n".data(using: .utf8) else {
+                throw EventStoreError.invalidEncoding
+            }
+            data.append(lineBreak)
+        }
+
+        guard ftruncate(descriptor, off_t(data.count)) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        guard lseek(descriptor, 0, SEEK_SET) >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        try data.withUnsafeBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else {
+                return
+            }
+
+            var bytesRemaining = buffer.count
+            var offset = 0
+
+            while bytesRemaining > 0 {
+                let written = write(descriptor, baseAddress.advanced(by: offset), bytesRemaining)
+                if written < 0 {
+                    throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                }
+
+                bytesRemaining -= written
+                offset += written
+            }
+        }
+
+        guard fsync(descriptor) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+    }
+
+    private func decodeReport(from data: Data) throws -> EventDecodeReport {
         guard let string = String(data: data, encoding: .utf8) else {
             throw EventStoreError.invalidEncoding
         }
 
         let decoder = JSONDecoder()
         var events: [AgentEvent] = []
+        var malformedLineCount = 0
 
         for line in string.split(whereSeparator: \.isNewline).map(String.init).filter({ !$0.isEmpty }) {
             guard let lineData = line.data(using: .utf8) else {
@@ -134,10 +213,11 @@ public struct EventStore: Sendable {
                 events.append(try decoder.decode(AgentEvent.self, from: lineData))
             } catch {
                 // Keep the watcher resilient if a single line in the append-only log gets corrupted.
+                malformedLineCount += 1
                 continue
             }
         }
 
-        return events
+        return EventDecodeReport(events: events, malformedLineCount: malformedLineCount)
     }
 }

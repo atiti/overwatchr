@@ -14,8 +14,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var launchAtLoginEnabled = false
     @Published private(set) var alertChimeEnabled = false
     @Published private(set) var jumpSoundEnabled = true
+    @Published private(set) var hotKeyConfiguration = HotKeyConfiguration.default
     @Published private(set) var shellIntegrationStatus: ShellIntegrationStatus?
     @Published var launchAtLoginMessage: String?
+    @Published var hotKeyMessage: String?
 
     let store: EventStore
 
@@ -43,6 +45,7 @@ final class AppModel: ObservableObject {
         self.seenLedger = (try? seenStore.load()) ?? SeenAlertLedger()
         self.alertChimeEnabled = preferences.alertChimeEnabled
         self.jumpSoundEnabled = preferences.jumpSoundEnabled
+        self.hotKeyConfiguration = preferences.hotKeyConfiguration
         start()
     }
 
@@ -59,14 +62,7 @@ final class AppModel: ObservableObject {
         refreshLaunchAtLoginStatus()
         refreshShellIntegrationStatus()
         watcher.start()
-
-        do {
-            try hotKeyMonitor.register { [weak self] in
-                self?.focusNextAlert()
-            }
-        } catch {
-            feedbackMessage = error.localizedDescription
-        }
+        registerHotKey()
     }
 
     func focusNextAlert() {
@@ -155,6 +151,16 @@ final class AppModel: ObservableObject {
         preferences.jumpSoundEnabled = enabled
     }
 
+    func setHotKeyConfiguration(_ configuration: HotKeyConfiguration) {
+        hotKeyConfiguration = configuration
+        preferences.hotKeyConfiguration = configuration
+        registerHotKey()
+    }
+
+    func resetHotKeyConfiguration() {
+        setHotKeyConfiguration(.default)
+    }
+
     func clearVisibleAlerts() {
         guard !alerts.isEmpty else {
             return
@@ -179,6 +185,18 @@ final class AppModel: ObservableObject {
 
     private func refreshAccessibilityStatus() {
         accessibilityTrusted = AXIsProcessTrusted()
+    }
+
+    private func registerHotKey() {
+        do {
+            try hotKeyMonitor.register(configuration: hotKeyConfiguration) { [weak self] in
+                self?.focusNextAlert()
+            }
+            hotKeyMessage = nil
+        } catch {
+            hotKeyMessage = error.localizedDescription
+            feedbackMessage = error.localizedDescription
+        }
     }
 
     private func refreshLaunchAtLoginStatus() {

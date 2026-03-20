@@ -9,6 +9,9 @@ APP_BUNDLE="$DIST_DIR/$APP_NAME"
 VERSION="${VERSION:-$(git -C "$ROOT_DIR" describe --tags --always --dirty 2>/dev/null || echo "0.1.0")}"
 VERSION="${VERSION#v}"
 CREATE_ARCHIVE="${CREATE_ARCHIVE:-1}"
+CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
+NOTARY_KEYCHAIN_PROFILE="${NOTARY_KEYCHAIN_PROFILE:-}"
+APP_BUNDLE_ID="${APP_BUNDLE_ID:-dev.overwatchr.menubar}"
 
 mkdir -p "$DIST_DIR"
 
@@ -64,7 +67,7 @@ printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
   <key>CFBundleIdentifier</key>
-  <string>dev.overwatchr.menubar</string>
+  <string>${APP_BUNDLE_ID}</string>
   <key>CFBundleName</key>
   <string>Overwatchr</string>
   <key>CFBundlePackageType</key>
@@ -83,6 +86,12 @@ printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 </plist>
 EOF
 
+if [[ -n "$CODESIGN_IDENTITY" ]]; then
+  echo "Code signing app and CLI with identity: $CODESIGN_IDENTITY"
+  codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" "$CLI_BINARY"
+  codesign --force --timestamp --options runtime --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+fi
+
 echo "Built app bundle at $APP_BUNDLE"
 
 if [[ "$CREATE_ARCHIVE" == "1" ]]; then
@@ -91,6 +100,15 @@ if [[ "$CREATE_ARCHIVE" == "1" ]]; then
   rm -f "$APP_ARCHIVE" "$CLI_ARCHIVE"
   ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$APP_ARCHIVE"
   ditto -c -k --keepParent "$CLI_BINARY" "$CLI_ARCHIVE"
+
+  if [[ -n "$NOTARY_KEYCHAIN_PROFILE" ]]; then
+    echo "Submitting app archive for notarization with profile: $NOTARY_KEYCHAIN_PROFILE"
+    xcrun notarytool submit "$APP_ARCHIVE" --keychain-profile "$NOTARY_KEYCHAIN_PROFILE" --wait
+    xcrun stapler staple "$APP_BUNDLE"
+    rm -f "$APP_ARCHIVE"
+    ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$APP_ARCHIVE"
+  fi
+
   echo "Packaged $APP_ARCHIVE"
   echo "Packaged $CLI_ARCHIVE"
 fi

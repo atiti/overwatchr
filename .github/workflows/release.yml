@@ -11,8 +11,11 @@ jobs:
     runs-on: macos-14
     permissions:
       contents: write
+    env:
+      CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+      NOTARY_KEYCHAIN_PROFILE: ${{ secrets.MACOS_NOTARY_KEYCHAIN_PROFILE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Test
         run: swift test
       - name: Build release binaries
@@ -21,8 +24,13 @@ jobs:
         run: |
           chmod +x scripts/build_app_bundle.sh install.sh scripts/smoke.sh
           VERSION="${GITHUB_REF_NAME#v}" CREATE_ARCHIVE=1 scripts/build_app_bundle.sh
+      - name: Verify signed app bundle
+        if: env.CODESIGN_IDENTITY != ''
+        run: |
+          codesign --verify --deep --strict dist/Overwatchr.app
+          spctl --assess --type execute --verbose=2 dist/Overwatchr.app
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: overwatchr-release
           path: |

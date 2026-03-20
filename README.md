@@ -17,7 +17,7 @@ When Codex, Claude Code, OpenCode, or other terminal agents are running in paral
 overwatchr gives you:
 
 - a menu bar queue of live agent pings
-- a global jump shortcut: `Ctrl+Option+Cmd+O`
+- a global jump shortcut you can change in settings
 - native terminal focusing for Ghostty, iTerm, and Terminal.app
 - local `seen` behavior so opened alerts drop out until the next new event
 - hook installers for Codex CLI, Claude Code, and OpenCode
@@ -103,6 +103,16 @@ Queue behavior:
 - `done` clears it from the active stream
 - optional alert chime lives in the menu bar settings pane
 
+Maintenance commands:
+
+```bash
+overwatchr events stats
+overwatchr events compact
+overwatchr events prune --older-than 30d
+```
+
+`compact` keeps the latest event per agent and writes a timestamped backup. `prune` drops older history while preserving the latest known event for every agent.
+
 ## Hook Bridge
 
 overwatchr includes a native bridge for hook-enabled tools:
@@ -153,12 +163,22 @@ The repository layout is:
 - CI builds and tests on macOS via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)
 - Tagged releases package the CLI and app via [`.github/workflows/release.yml`](./.github/workflows/release.yml)
 - release tags should use `v*`, for example `v0.1.0`
+- signed builds are enabled automatically when `MACOS_CODESIGN_IDENTITY` is present in GitHub Actions or `CODESIGN_IDENTITY` is set locally
+- notarization is enabled automatically when `MACOS_NOTARY_KEYCHAIN_PROFILE` is present in GitHub Actions or `NOTARY_KEYCHAIN_PROFILE` is set locally
+
+Local signed release example:
+
+```bash
+CODESIGN_IDENTITY="Developer ID Application: Example, Inc. (TEAMID1234)" \
+NOTARY_KEYCHAIN_PROFILE="overwatchr-notary" \
+VERSION=0.2.1 \
+scripts/build_app_bundle.sh
+```
 
 ## Roadmap
 
 - more hook targets
 - better terminal title inference
-- signed and notarized app bundles
 - optional richer notifications beyond the menu bar
 
 ## Contributing
