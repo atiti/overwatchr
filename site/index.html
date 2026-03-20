@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>overwatchr · Native attention layer for terminal AI agents</title>
+  <meta
+    name="description"
+    content="overwatchr is a native macOS menu bar app that watches terminal AI agents, queues the ones that need you, and jumps you straight back to the right tab."
+  />
+  <link rel="canonical" href="https://overwatchr.dev" />
+  <meta property="og:title" content="overwatchr" />
+  <meta property="og:description" content="Native attention layer for terminal AI agents on macOS." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://overwatchr.dev/assets/widget-queue.png" />
+  <meta property="og:url" content="https://overwatchr.dev" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="overwatchr" />
+  <meta name="twitter:description" content="Native attention layer for terminal AI agents on macOS." />
+  <meta name="twitter:image" content="https://overwatchr.dev/assets/widget-queue.png" />
+  <meta name="theme-color" content="#07111f" />
+  <link rel="icon" href="./assets/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <div class="grid-glow"></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="overwatchr home">
+        <img src="./assets/logo.png" alt="overwatchr owl logo" />
+        <span>overwatchr</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#how">How it works</a>
+        <a href="#proof">Screenshots</a>
+        <a href="#faq">FAQ</a>
+        <a class="nav-pill" href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">macOS · menu bar only · open source</div>
+          <h1>The native attention layer for terminal AI agents.</h1>
+          <p class="hero-lead">
+            Run Codex, Claude Code, and OpenCode in parallel without losing the thread.
+            <strong>overwatchr</strong> watches for stops, queues agents that need you,
+            and jumps you straight back to the right terminal tab.
+          </p>
+
+          <div class="trust-row" role="list" aria-label="Product highlights">
+            <span role="listitem">No Electron</span>
+            <span role="listitem">No Hammerspoon</span>
+            <span role="listitem">Ghostty · iTerm · Terminal</span>
+          </div>
+
+          <div class="badge-row" aria-label="Project badges">
+            <img alt="GitHub release" src="https://img.shields.io/github/v/release/atiti/overwatchr?style=flat-square&label=release&color=22d5ff" />
+            <img alt="GitHub stars" src="https://img.shields.io/github/stars/atiti/overwatchr?style=flat-square&label=stars&color=7aa2ff" />
+            <img alt="MIT license" src="https://img.shields.io/github/license/atiti/overwatchr?style=flat-square&color=9ee7ff" />
+          </div>
+
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">Star on GitHub</a>
+            <a class="button secondary" href="#install">See install</a>
+          </div>
+
+          <div class="install-card" id="install">
+            <div class="install-meta">
+              <span class="install-label">One-line install</span>
+              <button class="copy-button" type="button" data-copy-target="#install-command">Copy</button>
+            </div>
+            <code id="install-command">curl -fsSL https://raw.githubusercontent.com/atiti/overwatchr/main/install.sh | bash</code>
+            <p class="install-hint">Installs the CLI and menu bar app. Optional hooks for Codex, Claude Code, and OpenCode are one command away.</p>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="hero-window hero-window-main">
+            <div class="window-bar">
+              <span></span><span></span><span></span>
+              <span class="window-title">Attention queue</span>
+            </div>
+            <img src="./assets/widget-queue.png" alt="Overwatchr queue widget showing active terminal AI alerts" />
+          </div>
+
+          <div class="hero-window hero-window-floating">
+            <div class="window-bar">
+              <span></span><span></span><span></span>
+              <span class="window-title">Settings</span>
+            </div>
+            <img src="./assets/widget-idle.png" alt="Overwatchr settings pane with shortcut and sound controls" />
+          </div>
+
+          <div class="terminal-card">
+            <div class="terminal-head">
+              <span class="terminal-dot"></span>
+              <span class="terminal-name">terminal swarm log</span>
+            </div>
+            <pre><code>• Waited for background terminal
+• Running Stop hook: notifying overwatchr
+Stop hook (completed)
+
+$ overwatchr hooks install all --scope user
+Installed codex hooks (user)
+Installed claude hooks (user)
+Installed opencode hooks (user)
+
+$ Ctrl+Opt+Cmd+O
+Jumped to markster-mcp-api-mapper · ttys099 and marked it seen.</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="logo-strip" aria-label="Supported tools and terminals">
+        <span>Codex</span>
+        <span>Claude Code</span>
+        <span>OpenCode</span>
+        <span>Ghostty</span>
+        <span>iTerm</span>
+        <span>Terminal.app</span>
+      </section>
+
+      <section class="problem-solution">
+        <div class="section-intro">
+          <div class="eyebrow">Why this exists</div>
+          <h2>Parallel agents are fast. Context switching is not.</h2>
+          <p>
+            The bottleneck is no longer “can an agent do the work?” It is “can you notice the right stop at the right time,
+            and get back to the right tab before the whole thread evaporates?” overwatchr turns that chaos into one queue,
+            one shortcut, and one clean jump path.
+          </p>
+        </div>
+
+        <div class="feature-grid" id="how">
+          <article class="feature-card">
+            <div class="feature-icon">01</div>
+            <h3>Hooks emit local events</h3>
+            <p>Codex, Claude Code, and OpenCode write append-only JSONL events into <code>~/.overwatchr/events.jsonl</code>.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">02</div>
+            <h3>The menu bar becomes your queue</h3>
+            <p>Fresh alerts stack in one native menu bar widget, with seen-state, jump feedback, sounds, and a configurable global shortcut.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">03</div>
+            <h3>Jump back without tab hunting</h3>
+            <p>Overwatchr focuses the right Ghostty, iTerm, or Terminal tab using native macOS APIs plus terminal-specific matching.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="value-band">
+        <div class="value-copy">
+          <div class="eyebrow">Built for real operators</div>
+          <h2>Fast enough to disappear. Clear enough to trust.</h2>
+          <p>
+            The design goal is not “more notifications.” It is quiet confidence: a small control tower for AI-heavy terminal workflows,
+            with fewer false positives, fewer lost tabs, and less background cognitive drag.
+          </p>
+        </div>
+
+        <div class="value-checks">
+          <div class="check-card">
+            <h3>Native macOS</h3>
+            <p>Swift, SwiftUI, AppKit, AppleScript, Accessibility APIs. No runtime dependency maze.</p>
+          </div>
+          <div class="check-card">
+            <h3>Open source</h3>
+            <p>MIT licensed, GitHub-first, easy to audit, easy to adapt, and built to work with terminals you already use.</p>
+          </div>
+          <div class="check-card">
+            <h3>Operator-friendly behavior</h3>
+            <p>Frontmost sessions auto-suppress redundant alerts, active queues are deduped, and event logs stay inspectable.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="proof" id="proof">
+        <div class="section-intro">
+          <div class="eyebrow">Product proof</div>
+          <h2>The widget is the product.</h2>
+          <p>
+            No dashboard detour. No giant window. No setup maze. The experience lives in the menu bar and stays out of your way until it matters.
+          </p>
+        </div>
+
+        <div class="proof-grid">
+          <figure class="proof-card">
+            <img src="./assets/widget-queue.png" alt="Queue view showing live alerts in Overwatchr" />
+            <figcaption>Queue view with live alerts, jump actions, and fast visual triage.</figcaption>
+          </figure>
+          <figure class="proof-card">
+            <img src="./assets/widget-idle.png" alt="Settings view showing shortcut, sounds, launch at login, and shell sync" />
+            <figcaption>Compact settings for shortcut capture, shell sync, sounds, and launch-at-login.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="install-band">
+        <div class="install-band-copy">
+          <div class="eyebrow">Get started</div>
+          <h2>From zero to useful in minutes.</h2>
+          <p>Install the app, grant Accessibility, install hooks, and let your agent swarm get loud only when it actually matters.</p>
+        </div>
+        <div class="install-steps">
+          <div class="step">
+            <span>1</span>
+            <p>Run the one-line installer.</p>
+          </div>
+          <div class="step">
+            <span>2</span>
+            <p>Launch Overwatchr and enable Accessibility.</p>
+          </div>
+          <div class="step">
+            <span>3</span>
+            <p>Run <code>overwatchr hooks install all --scope user</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq" id="faq">
+        <div class="section-intro">
+          <div class="eyebrow">FAQ</div>
+          <h2>Questions people ask before installing.</h2>
+        </div>
+
+        <div class="faq-list">
+          <details open>
+            <summary>Does it work with my existing terminal setup?</summary>
+            <p>Yes, if you use Ghostty, iTerm, or Terminal.app. Overwatchr is designed to sit on top of the terminals you already use, not replace them.</p>
+          </details>
+          <details>
+            <summary>Do I need tmux, Hammerspoon, or a companion daemon?</summary>
+            <p>No. Overwatchr uses native macOS APIs and local JSONL events. No Electron shell, no Hammerspoon dependency, no tmux requirement.</p>
+          </details>
+          <details>
+            <summary>Why does it ask for Accessibility access?</summary>
+            <p>That permission lets Overwatchr focus the correct terminal tab or window when you jump from the queue.</p>
+          </details>
+          <details>
+            <summary>Is it only for Codex?</summary>
+            <p>No. Codex is supported, but the hook bridge also supports Claude Code and OpenCode, and the local event format stays simple by design.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <div>
+          <div class="eyebrow">Ship more, context-switch less</div>
+          <h2>Try overwatchr on your own agent swarm.</h2>
+        </div>
+        <div class="cta-actions">
+          <a class="button primary" href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">Open GitHub</a>
+          <a class="button secondary" href="https://github.com/atiti/overwatchr/releases/latest" target="_blank" rel="noreferrer">Download latest release</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>overwatchr</span>
+      <span>Native macOS attention layer for terminal AI agents.</span>
+      <a href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">github.com/atiti/overwatchr</a>
+    </footer>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>
