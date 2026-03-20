@@ -10,6 +10,13 @@ overwatchr is a native macOS menu bar utility for terminal-based AI agents. It w
 
 It is built with Swift, SwiftUI, and native macOS APIs only. No Electron. No tmux dependency. No Hammerspoon.
 
+## Screenshots
+
+<p align="center">
+  <img src="./Assets/screenshots/widget-queue.png" alt="Overwatchr queue widget showing active agent alerts" width="46%" />
+  <img src="./Assets/screenshots/widget-idle.png" alt="Overwatchr settings panel with shortcut and sound controls" width="46%" />
+</p>
+
 ## Why it exists
 
 When Codex, Claude Code, OpenCode, or other terminal agents are running in parallel, the hard part is not starting them. It is noticing the exact moment one of them needs you, then getting back to the correct tab fast.
