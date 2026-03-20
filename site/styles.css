@@ -163,7 +163,7 @@ main,
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
   gap: 3rem;
-  padding: 5.25rem 0 3rem;
+  padding: 4.4rem 0 3rem;
   align-items: center;
 }
 
@@ -189,8 +189,8 @@ main,
 }
 
 .hero h1 {
-  font-size: clamp(3rem, 7vw, 5.8rem);
-  max-width: 10ch;
+  font-size: clamp(2.5rem, 4.6vw, 4.2rem);
+  max-width: 9.5ch;
 }
 
 .hero-lead,
@@ -204,15 +204,15 @@ main,
 }
 
 .hero-lead {
-  max-width: 40rem;
-  margin: 1.5rem 0 0;
+  max-width: 33rem;
+  margin: 1.25rem 0 0;
 }
 
 .trust-row {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-  margin: 1.8rem 0 0;
+  margin: 1.55rem 0 0;
 }
 
 .trust-row span,
@@ -230,12 +230,51 @@ main,
   border: 1px solid var(--border);
 }
 
+.badge-row {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(148, 189, 255, 0.14);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.metric-label {
+  color: rgba(204, 225, 255, 0.64);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metric-pill strong {
+  font-size: 0.92rem;
+}
+
 .hero-actions,
 .cta-actions {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-top: 2rem;
+  margin-top: 1.6rem;
+}
+
+.hero-note {
+  max-width: 34rem;
+  margin: 1rem 0 0;
+  color: rgba(214, 227, 249, 0.64);
+  line-height: 1.55;
+  font-size: 0.95rem;
 }
 
 .button {
@@ -404,30 +443,293 @@ main,
 .logo-strip,
 .install-band,
 .value-band,
-.cta-band {
+.cta-band,
+.tour-band {
   border-radius: var(--radius-xl);
 }
 
 .logo-strip {
   margin-top: 1rem;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.1rem;
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: center;
+  gap: 0.75rem;
   flex-wrap: wrap;
   color: rgba(211, 230, 255, 0.72);
 }
 
-.logo-strip span {
-  font-size: 0.95rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.logo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(145, 183, 255, 0.12);
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.logo-icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef5ff;
+  font-size: 0.77rem;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.logo-icon svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+
+.logo-icon-openai {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.logo-icon-claude {
+  background: rgba(237, 164, 102, 0.18);
+  color: #ffd3ad;
+}
+
+.logo-icon-opencode {
+  background: rgba(127, 211, 255, 0.16);
+  color: #9ce4ff;
+  font-size: 0.6rem;
+  letter-spacing: -0.04em;
+}
+
+.logo-icon-ghostty {
+  background: rgba(106, 168, 255, 0.18);
+  color: #c7ddff;
+}
+
+.logo-icon-iterm {
+  background: rgba(132, 255, 197, 0.14);
+  color: #b9ffdc;
+  font-size: 0.66rem;
+}
+
+.logo-icon-terminal {
+  background: rgba(255, 255, 255, 0.11);
+  color: #f4f8ff;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
 }
 
 .problem-solution,
 .proof,
 .faq {
   padding: 6rem 0 0;
+}
+
+.tour-band {
+  margin-top: 3.5rem;
+  padding: 1.9rem;
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 1.6rem;
+  background: linear-gradient(180deg, rgba(29, 44, 71, 0.9), rgba(20, 31, 51, 0.9));
+  border: 1px solid rgba(138, 179, 255, 0.16);
+  box-shadow: var(--shadow);
+}
+
+.tour-copy h2 {
+  margin: 0;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.tour-copy p {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.tour-steps {
+  margin-top: 1.45rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tour-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  align-items: start;
+  padding: 0.95rem 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(141, 181, 255, 0.12);
+}
+
+.tour-step span {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(34, 213, 255, 0.16);
+  color: var(--cyan);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.9rem;
+}
+
+.tour-step p {
+  margin: 0.1rem 0 0;
+  color: var(--text);
+  line-height: 1.5;
+  font-size: 0.98rem;
+}
+
+.tour-stage {
+  position: relative;
+  min-height: 31rem;
+  padding: 1rem;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(34, 213, 255, 0.16), transparent 26%),
+    rgba(7, 16, 29, 0.82);
+  border: 1px solid rgba(147, 187, 255, 0.14);
+  overflow: hidden;
+}
+
+.tour-stage-label {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(156, 196, 255, 0.14);
+  color: rgba(210, 228, 250, 0.76);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tour-reel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 29rem;
+}
+
+.tour-frame {
+  position: absolute;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(149, 190, 255, 0.14);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+}
+
+.tour-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tour-frame-a {
+  width: min(74%, 24rem);
+  right: 1.2rem;
+  top: 2.8rem;
+  transform: rotate(-4deg);
+}
+
+.tour-frame-b {
+  width: min(58%, 19rem);
+  left: 0.4rem;
+  top: 10.2rem;
+  transform: rotate(4deg);
+}
+
+.tour-frame-c {
+  width: min(54%, 18rem);
+  right: 2.4rem;
+  bottom: 1.1rem;
+  transform: rotate(2deg);
+}
+
+.tour-terminal-card {
+  background: rgba(6, 11, 20, 0.96);
+  color: #b8e8ff;
+}
+
+.tour-terminal-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.8rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tour-terminal-head span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.tour-terminal-head strong {
+  margin-left: 0.3rem;
+  color: rgba(213, 230, 255, 0.66);
+  font-size: 0.76rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.tour-terminal-card pre {
+  margin: 0;
+  padding: 1rem 1.05rem 1.15rem;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+.tour-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  background: rgba(5, 15, 26, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(163, 205, 255, 0.16);
+  color: #eff6ff;
+  font-weight: 700;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+.tour-play-icon {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1cd6ff 0%, #3a8cff 100%);
+  color: #04111a;
+  font-size: 0.8rem;
+  box-shadow: 0 0 0 0 rgba(34, 213, 255, 0.4);
+  animation: pulseRing 2.6s ease-out infinite;
 }
 
 .section-intro {
@@ -504,6 +806,8 @@ main,
 .proof-card img {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
 }
 
 .proof-card figcaption {
@@ -594,6 +898,7 @@ main,
 
 @media (max-width: 1120px) {
   .hero,
+  .tour-band,
   .value-band,
   .install-band,
   .cta-band {
@@ -622,6 +927,10 @@ main,
     gap: 2rem;
   }
 
+  .badge-row {
+    gap: 0.5rem;
+  }
+
   .hero-window-main,
   .hero-window-floating,
   .terminal-card {
@@ -639,11 +948,16 @@ main,
   .proof-grid {
     grid-template-columns: 1fr;
   }
+
+  .tour-stage {
+    min-height: 27rem;
+  }
 }
 
 @media (max-width: 560px) {
   .hero h1 {
     max-width: none;
+    font-size: clamp(2.55rem, 10vw, 3.7rem);
   }
 
   .install-card code,
@@ -656,8 +970,46 @@ main,
     width: 100%;
   }
 
+  .metric-pill {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .hero-actions,
   .cta-actions {
     flex-direction: column;
+  }
+
+  .tour-stage {
+    min-height: 23rem;
+    padding: 0.8rem;
+  }
+
+  .tour-stage-label,
+  .tour-pulse {
+    position: static;
+    transform: none;
+    margin-bottom: 0.8rem;
+  }
+
+  .tour-frame-a,
+  .tour-frame-b,
+  .tour-frame-c {
+    position: static;
+    width: 100%;
+    transform: none;
+    margin-bottom: 0.85rem;
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 213, 255, 0.42);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(34, 213, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 213, 255, 0);
   }
 }
