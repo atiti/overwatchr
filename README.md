@@ -139,7 +139,7 @@ For Ghostty and other terminals that honor standard OSC title sequences, install
 overwatchr shell install --shell zsh
 ```
 
-That keeps `OVERWATCHR_TITLE` and the terminal tab title aligned to the current project directory, which makes Codex alerts much easier to jump back to.
+That keeps `OVERWATCHR_TITLE` and the terminal tab title aligned to the current project directory, and appends a short terminal suffix like `ttys099` when available so same-project tabs stay distinguishable.
 
 ## Development
 

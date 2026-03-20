@@ -15,6 +15,8 @@ final class ShellIntegrationInstallerTests: XCTestCase {
         let snippetContents = try String(contentsOf: result.snippetFile, encoding: .utf8)
 
         XCTAssertTrue(rcContents.contains(#"source "$HOME/.config/overwatchr/shell.zsh""#))
+        XCTAssertTrue(snippetContents.contains("_overwatchr_title_suffix()"))
+        XCTAssertTrue(snippetContents.contains(#"${base} · ${suffix}"#))
         XCTAssertTrue(snippetContents.contains("export OVERWATCHR_TITLE=\"$title\""))
         XCTAssertTrue(snippetContents.contains(#"printf '\033]0;%s\007' "$title""#))
         XCTAssertTrue(snippetContents.contains(#"perform action ("set_tab_title:" & desiredTitle) on focused terminal of selected tab of front window"#))

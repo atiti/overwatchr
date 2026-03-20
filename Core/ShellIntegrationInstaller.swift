@@ -75,7 +75,7 @@ public struct ShellIntegrationInstaller {
             rcFile: rcURL,
             snippetFile: snippetURL,
             notes: [
-                "Interactive \(shell.rawValue) shells will export OVERWATCHR_TITLE from the current directory name.",
+                "Interactive \(shell.rawValue) shells will export OVERWATCHR_TITLE from the current directory name plus a short terminal suffix when available.",
                 "The shell will also emit the same title through the standard OSC title escape sequence.",
                 "On Ghostty 1.3.1+, the focused tab title is updated through AppleScript for more reliable session targeting."
             ]
@@ -149,8 +149,26 @@ private extension ShellProfile {
             fi
             export _OVERWATCHR_SHELL_ZSH_LOADED=1
 
+            _overwatchr_title_suffix() {
+              local tty_path tty_name
+              tty_path="$(tty 2>/dev/null || true)"
+              if [ -z "$tty_path" ] || [ "$tty_path" = "not a tty" ] || [ "$tty_path" = "/dev/tty" ]; then
+                return 0
+              fi
+              tty_name="${tty_path##*/}"
+              print -r -- "$tty_name"
+            }
+
             _overwatchr_compute_title() {
-              print -r -- "${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD:t}}}"
+              local base suffix
+              base="${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD:t}}}"
+              suffix="$(_overwatchr_title_suffix)"
+
+              if [ -n "$suffix" ]; then
+                print -r -- "${base} · ${suffix}"
+              else
+                print -r -- "$base"
+              fi
             }
 
             _overwatchr_write_title() {
@@ -211,8 +229,26 @@ private extension ShellProfile {
             fi
             export _OVERWATCHR_SHELL_BASH_LOADED=1
 
+            _overwatchr_title_suffix() {
+              local tty_path tty_name
+              tty_path="$(tty 2>/dev/null || true)"
+              if [ -z "$tty_path" ] || [ "$tty_path" = "not a tty" ] || [ "$tty_path" = "/dev/tty" ]; then
+                return 0
+              fi
+              tty_name="${tty_path##*/}"
+              printf '%s' "$tty_name"
+            }
+
             _overwatchr_compute_title() {
-              printf '%s' "${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD##*/}}}"
+              local base suffix
+              base="${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD##*/}}}"
+              suffix="$(_overwatchr_title_suffix)"
+
+              if [ -n "$suffix" ]; then
+                printf '%s · %s' "$base" "$suffix"
+              else
+                printf '%s' "$base"
+              fi
             }
 
             _overwatchr_write_title() {
