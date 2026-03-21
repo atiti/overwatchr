@@ -12,12 +12,12 @@
   <meta property="og:title" content="overwatchr" />
   <meta property="og:description" content="Native attention layer for terminal AI agents on macOS." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://overwatchr.dev/assets/widget-queue.png" />
+  <meta property="og:image" content="https://overwatchr.dev/assets/widget-idle.png" />
   <meta property="og:url" content="https://overwatchr.dev" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="overwatchr" />
   <meta name="twitter:description" content="Native attention layer for terminal AI agents on macOS." />
-  <meta name="twitter:image" content="https://overwatchr.dev/assets/widget-queue.png" />
+  <meta name="twitter:image" content="https://overwatchr.dev/assets/widget-idle.png" />
   <meta name="theme-color" content="#07111f" />
   <link rel="icon" href="./assets/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -53,31 +53,31 @@
       <section class="hero">
         <div class="hero-copy">
           <div class="eyebrow">macOS · menu bar only · open source</div>
-          <h1>Native menu bar alerts for terminal AI agents.</h1>
+          <h1>Know exactly when an <span class="headline-accent">agent needs you</span>. Jump back in one shortcut.</h1>
           <p class="hero-lead">
-            <strong>overwatchr</strong> watches Codex, Claude Code, and OpenCode,
-            quietly queues the sessions that need you, and lets you jump back to the right
-            terminal tab with one shortcut when you are ready.
+            <strong>overwatchr</strong> is a native macOS menu bar app for people running multiple terminal agents at once.
+            It keeps interruptions quiet, shows what actually needs attention, and gets you back to the right tab fast
+            without pulling you out of the task you are in.
           </p>
 
-          <div class="trust-row" role="list" aria-label="Product highlights">
-            <span role="listitem">No Electron</span>
-            <span role="listitem">No Hammerspoon</span>
-            <span role="listitem">Ghostty · iTerm · Terminal</span>
+          <div class="hero-proof-row" role="list" aria-label="Product proof">
+            <span role="listitem">Native macOS</span>
+            <span role="listitem">Works with Codex, Claude Code, OpenCode</span>
+            <span role="listitem">Ghostty, iTerm, Terminal.app</span>
           </div>
 
-          <div class="badge-row" aria-label="Project badges">
+          <div class="hero-meta-row" aria-label="Product details">
             <a class="metric-pill" href="https://github.com/atiti/overwatchr/releases/latest" target="_blank" rel="noreferrer">
-              <span class="metric-label">Latest release</span>
-              <strong>v0.3.2</strong>
-            </a>
-            <a class="metric-pill" href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">
-              <span class="metric-label">GitHub stars</span>
-              <strong>Open source</strong>
+              <span class="metric-label">Latest</span>
+              <strong>v0.3.3</strong>
             </a>
             <a class="metric-pill" href="https://github.com/atiti/overwatchr/blob/main/LICENSE" target="_blank" rel="noreferrer">
               <span class="metric-label">License</span>
               <strong>MIT</strong>
+            </a>
+            <a class="metric-pill" href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">
+              <span class="metric-label">Source</span>
+              <strong>GitHub</strong>
             </a>
           </div>
 
@@ -86,17 +86,18 @@
             <a class="button secondary" href="#tour">Watch 20-Second Tour</a>
           </div>
 
-          <p class="hero-note">
-            Best on Ghostty, iTerm, and Terminal.app. Hooks install in one command. No Electron, no Hammerspoon, no tmux required.
-          </p>
-
           <div class="install-card" id="install">
             <div class="install-meta">
-              <span class="install-label">One-line install</span>
+              <span class="install-label">Install once, hook once</span>
               <button class="copy-button" type="button" data-copy-target="#install-command">Copy</button>
             </div>
             <code id="install-command">curl -fsSL https://raw.githubusercontent.com/atiti/overwatchr/main/install.sh | bash</code>
-            <p class="install-hint">Installs the CLI and menu bar app. Optional hooks for Codex, Claude Code, and OpenCode are one command away.</p>
+            <p class="install-hint">Installs the CLI and menu bar app. Hook support for Codex, Claude Code, and OpenCode is one command away.</p>
+            <div class="install-points" aria-label="Installer highlights">
+              <span>CLI + app</span>
+              <span>User-wide hooks</span>
+              <span>No Electron</span>
+            </div>
           </div>
         </div>
 
@@ -106,7 +107,7 @@
               <span></span><span></span><span></span>
               <span class="window-title">Attention queue</span>
             </div>
-            <img src="./assets/widget-queue.png" alt="Overwatchr queue widget showing active terminal AI alerts" />
+            <img src="./assets/widget-idle.png" alt="Overwatchr queue widget showing active terminal AI alerts" />
           </div>
 
           <div class="hero-window hero-window-floating">
@@ -114,7 +115,7 @@
               <span></span><span></span><span></span>
               <span class="window-title">Settings</span>
             </div>
-            <img src="./assets/widget-idle.png" alt="Overwatchr settings pane with shortcut and sound controls" />
+            <img src="./assets/widget-queue.png" alt="Overwatchr settings pane with shortcut and sound controls" />
           </div>
 
           <div class="terminal-card">
@@ -139,35 +140,27 @@ Jumped to markster-mcp-api-mapper · ttys099 and marked it seen.</code></pre>
 
       <section class="logo-strip" aria-label="Supported tools and terminals">
         <span class="logo-chip">
-          <span class="logo-icon logo-icon-openai" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="presentation">
-              <path d="M12 3.2c1.5 0 2.7.5 3.7 1.4 1.5-.2 3 .3 4.1 1.4 1.8 1.8 1.9 4.7.4 6.7.7 1.6.4 3.5-.9 4.8-1.3 1.3-3.2 1.6-4.8.9-1.2.9-2.7 1.4-4.2 1.2-2.5-.2-4.5-2.3-4.5-4.8-1-1-1.5-2.3-1.5-3.7 0-2.8 2.2-5 5-5 .8-1.7 2.6-2.9 4.7-2.9Zm-.1 3.1c-1.1 0-2 .6-2.5 1.5l2.2 1.3 2.5-1.4c-.5-.9-1.3-1.4-2.2-1.4Zm-4.3 3c-.8 0-1.5.7-1.5 1.7 0 .8.4 1.5 1.1 2l.1-2.6 2.3-1.4c-.6-.4-1.2-.7-2-.7Zm8.8.6-2.2 1.3.1 2.9 2.3 1.3c.5-.5.8-1.1.8-1.9 0-.9-.4-1.8-1-2.3Zm-4.4 2-2.3 1.3-.1 2.7c.7.3 1.5.3 2.2-.1.7-.4 1.2-1 1.4-1.7l-1.2-.7Zm-1.5-1.3 1.5-.8 1.5.8v1.6l-1.5.8-1.5-.8v-1.6Z"/>
-            </svg>
-          </span>
+          <span class="logo-icon logo-icon-app" aria-hidden="true"><img src="./assets/app-icons/codex.png" alt="" /></span>
           <span>Codex</span>
         </span>
         <span class="logo-chip">
-          <span class="logo-icon logo-icon-claude" aria-hidden="true">C</span>
+          <span class="logo-icon logo-icon-app" aria-hidden="true"><img src="./assets/app-icons/claude.png" alt="" /></span>
           <span>Claude Code</span>
         </span>
         <span class="logo-chip">
-          <span class="logo-icon logo-icon-opencode" aria-hidden="true">&lt;/&gt;</span>
+          <span class="logo-icon logo-icon-app" aria-hidden="true"><img src="./assets/app-icons/opencode.png" alt="" /></span>
           <span>OpenCode</span>
         </span>
         <span class="logo-chip">
-          <span class="logo-icon logo-icon-ghostty" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="presentation">
-              <path d="M12 2.5c3.5 0 6.8 1.6 9 4.4l-1.8 1.4c-1.7-2.2-4.3-3.5-7.2-3.5s-5.6 1.3-7.2 3.5L3 6.9C5.2 4.1 8.5 2.5 12 2.5Zm-4.4 8.2c.8 0 1.5.4 1.8 1.1.2.5.7.8 1.2.8h3c.5 0 1-.3 1.2-.8.3-.7 1-1.1 1.8-1.1 1 0 1.8.8 1.8 1.8 0 .4-.1.7-.3 1l-2.4 3.4c-.9 1.3-2.4 2.1-4 2.1h-.2c-1.6 0-3.1-.8-4-2.1L6.1 13.5c-.2-.3-.3-.6-.3-1 0-1 .8-1.8 1.8-1.8Zm2.8 3.6.7.8c.2.3.5.4.8.4h.2c.3 0 .6-.1.8-.4l.7-.8h-3.6Z"/>
-            </svg>
-          </span>
+          <span class="logo-icon logo-icon-app" aria-hidden="true"><img src="./assets/app-icons/ghostty.png" alt="" /></span>
           <span>Ghostty</span>
         </span>
         <span class="logo-chip">
-          <span class="logo-icon logo-icon-iterm" aria-hidden="true">iT</span>
+          <span class="logo-icon logo-icon-app" aria-hidden="true"><img src="./assets/app-icons/iterm.png" alt="" /></span>
           <span>iTerm</span>
         </span>
         <span class="logo-chip">
-          <span class="logo-icon logo-icon-terminal" aria-hidden="true">›_</span>
+          <span class="logo-icon logo-icon-app" aria-hidden="true"><img src="./assets/app-icons/terminal.png" alt="" /></span>
           <span>Terminal.app</span>
         </span>
       </section>
@@ -175,24 +168,24 @@ Jumped to markster-mcp-api-mapper · ttys099 and marked it seen.</code></pre>
       <section class="tour-band" id="tour">
         <div class="tour-copy">
           <div class="eyebrow">20-second tour</div>
-          <h2>The whole flow, without a dashboard detour.</h2>
+          <h2>See the exact loop in one glance.</h2>
           <p>
-            Overwatchr is deliberately small: an agent finishes, the queue updates, and when you are ready,
-            one shortcut takes you back to the right terminal. That is the product loop.
+            The product is deliberately small: an agent finishes, the queue updates, and one shortcut takes you
+            back to the right session when you are ready. No dashboard tab. No noisy takeover.
           </p>
 
           <div class="tour-steps">
             <div class="tour-step">
               <span>1</span>
-              <p>An agent stops or needs input. A local hook writes an event.</p>
+              <p>An agent stops or asks for input. A local hook writes the event.</p>
             </div>
             <div class="tour-step">
               <span>2</span>
-              <p>The menu bar quietly shows the alert instead of hijacking your focus.</p>
+              <p>The menu bar shows the alert quietly instead of hijacking your current flow.</p>
             </div>
             <div class="tour-step">
               <span>3</span>
-              <p>You press the jump shortcut and land back in the right tab.</p>
+              <p>You hit the jump shortcut and land in the right terminal tab.</p>
             </div>
           </div>
         </div>
@@ -201,7 +194,7 @@ Jumped to markster-mcp-api-mapper · ttys099 and marked it seen.</code></pre>
           <div class="tour-stage-label">Product Hunt launch clip</div>
           <div class="tour-reel">
             <div class="tour-frame tour-frame-a">
-              <img src="./assets/widget-queue.png" alt="Queue view showing live alerts in Overwatchr" />
+              <img src="./assets/widget-idle.png" alt="Queue view showing live alerts in Overwatchr" />
             </div>
             <div class="tour-frame tour-frame-b">
               <div class="tour-terminal-card">
@@ -217,12 +210,13 @@ Jumped to slackening · ttys101</code></pre>
               </div>
             </div>
             <div class="tour-frame tour-frame-c">
-              <img src="./assets/widget-idle.png" alt="Settings view showing shortcut and sound controls" />
+              <img src="./assets/widget-queue.png" alt="Settings view showing shortcut and sound controls" />
             </div>
             <div class="tour-pulse">
               <span class="tour-play-icon">▶</span>
-              <span>20-second tour</span>
+              <span>Watch the loop</span>
             </div>
+            <div class="tour-caption">Alert arrives. Badge lights up. Shortcut lands you back in the right tab.</div>
           </div>
         </div>
       </section>
@@ -294,11 +288,11 @@ Jumped to slackening · ttys101</code></pre>
 
         <div class="proof-grid">
           <figure class="proof-card">
-            <img src="./assets/widget-idle.png" alt="Settings view showing shortcut, sounds, launch at login, and shell sync" />
+            <img src="./assets/widget-queue.png" alt="Settings view showing shortcut, sounds, launch at login, and shell sync" />
             <figcaption>Compact settings for shortcut capture, shell sync, sounds, and launch-at-login.</figcaption>
           </figure>
           <figure class="proof-card">
-            <img src="./assets/widget-queue.png" alt="Queue view showing live alerts in Overwatchr" />
+            <img src="./assets/widget-idle.png" alt="Queue view showing live alerts in Overwatchr" />
             <figcaption>Queue view with live alerts, jump actions, and fast visual triage.</figcaption>
           </figure>
         </div>
