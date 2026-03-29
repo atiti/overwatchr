@@ -10,6 +10,12 @@ overwatchr is a native macOS menu bar utility for terminal-based AI agents. It w
 
 It is built with Swift, SwiftUI, and native macOS APIs only. No Electron. No tmux dependency. No Hammerspoon.
 
+## Positioning Snapshot
+
+- Core promise: never miss agent handoffs and recover focus instantly to the right terminal tab.
+- Primary users: solo builders and small engineering teams running multiple local terminal agents.
+- Secondary users: devrel and AI-heavy product teams that demo or operate parallel agent workflows.
+
 ## Screenshots
 
 <p align="center">
