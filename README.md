@@ -10,6 +10,12 @@ overwatchr is a native macOS menu bar utility for terminal-based AI agents. It w
 
 It is built with Swift, SwiftUI, and native macOS APIs only. No Electron. No tmux dependency. No Hammerspoon.
 
+## Positioning Snapshot
+
+- Core promise: never miss agent handoffs and recover focus instantly to the right terminal tab.
+- Primary users: solo builders and small engineering teams running multiple local terminal agents.
+- Secondary users: devrel and AI-heavy product teams that demo or operate parallel agent workflows.
+
 ## Screenshots
 
 <p align="center">
@@ -90,6 +96,44 @@ Project-local setup also works:
 ```bash
 overwatchr hooks install all --scope project
 ```
+
+## First 10 Minutes
+
+Use this loop to validate that setup is complete and jump-back behavior works end to end.
+
+1. Install and launch:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/atiti/overwatchr/main/install.sh | bash
+```
+
+2. In macOS Settings, allow Accessibility for `Overwatchr.app`.
+3. Install hooks and shell sync:
+
+```bash
+overwatchr hooks install all --scope user
+overwatchr shell install --shell zsh
+```
+
+4. Trigger deterministic test alerts:
+
+```bash
+overwatchr alert --agent onboarding-smoke --project first-run --terminal ghostty --title "onboarding smoke"
+overwatchr error --agent onboarding-smoke --project first-run --terminal ghostty --title "error path smoke"
+```
+
+5. Confirm success criteria:
+
+- the menu bar queue count increases after the test events
+- selecting an alert (or pressing your global shortcut) jumps to the expected terminal tab
+- focused alerts disappear from queue as `seen`
+
+## If activation fails
+
+- Accessibility denied: reopen macOS Settings -> Privacy & Security -> Accessibility, enable `Overwatchr.app`, then relaunch app.
+- Hooks missing/stale: rerun `overwatchr hooks install all --scope user` and verify your hook files in `~/.codex`, `~/.claude`, or `~/.config/opencode`.
+- Shell title sync missing: run `overwatchr shell install --shell zsh`, restart shell, then retry test alert.
+- Unsupported terminal: use Ghostty, iTerm, or Terminal.app; other terminals may emit events but cannot be focused reliably.
 
 ## Manual CLI Usage
 

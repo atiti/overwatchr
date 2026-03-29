@@ -42,6 +42,7 @@
 
       <nav class="site-nav" aria-label="Primary">
         <a href="#how">How it works</a>
+        <a href="#personas">Who it is for</a>
         <a href="#tour">Tour</a>
         <a href="#proof">Screenshots</a>
         <a href="#faq">FAQ</a>
@@ -64,12 +65,13 @@
             <span role="listitem">Native macOS</span>
             <span role="listitem">Works with Codex, Claude Code, OpenCode</span>
             <span role="listitem">Ghostty, iTerm, Terminal.app</span>
+            <span role="listitem">Built for solo builders and small engineering teams</span>
           </div>
 
           <div class="hero-meta-row" aria-label="Product details">
             <a class="metric-pill" href="https://github.com/atiti/overwatchr/releases/latest" target="_blank" rel="noreferrer">
               <span class="metric-label">Latest</span>
-              <strong>v0.3.3</strong>
+              <strong>Release</strong>
             </a>
             <a class="metric-pill" href="https://github.com/atiti/overwatchr/blob/main/LICENSE" target="_blank" rel="noreferrer">
               <span class="metric-label">License</span>
@@ -251,6 +253,35 @@ Jumped to slackening · ttys101</code></pre>
         </div>
       </section>
 
+      <section class="problem-solution" id="personas">
+        <div class="section-intro">
+          <div class="eyebrow">Who it is for</div>
+          <h2>Teams and builders running multiple agent threads at once.</h2>
+          <p>
+            Overwatchr is best when parallel agent work is frequent and context switching costs are visible every day.
+            These are the primary operator profiles we optimize for.
+          </p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon">A</div>
+            <h3>Solo builders</h3>
+            <p>Keep multiple coding or research agents active without losing flow in your current terminal task.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">B</div>
+            <h3>Small engineering teams</h3>
+            <p>Reduce missed handoffs and triage time when agents are running across several local project terminals.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">C</div>
+            <h3>DevRel and AI-heavy product squads</h3>
+            <p>Demo parallel agent workflows confidently with a clear, local control loop and fast tab recovery.</p>
+          </article>
+        </div>
+      </section>
+
       <section class="value-band">
         <div class="value-copy">
           <div class="eyebrow">Built for real operators</div>
@@ -302,7 +333,8 @@ Jumped to slackening · ttys101</code></pre>
         <div class="install-band-copy">
           <div class="eyebrow">Get started</div>
           <h2>From zero to useful in minutes.</h2>
-          <p>Install the app, grant Accessibility, install hooks, and let your agent swarm get loud only when it actually matters.</p>
+          <p>Install the app, grant Accessibility, install hooks, then run a test alert so you can verify the full queue-and-jump loop before real work starts.</p>
+          <p>Success looks like this: the queue badge increments and your jump shortcut returns you to the target tab. If not, use the troubleshooting steps in <a href="https://github.com/atiti/overwatchr#if-activation-fails" target="_blank" rel="noreferrer">README activation fixes</a>.</p>
         </div>
         <div class="install-steps">
           <div class="step">
@@ -316,6 +348,10 @@ Jumped to slackening · ttys101</code></pre>
           <div class="step">
             <span>3</span>
             <p>Run <code>overwatchr hooks install all --scope user</code>.</p>
+          </div>
+          <div class="step">
+            <span>4</span>
+            <p>Run <code>overwatchr alert --agent onboarding-smoke --project first-run --terminal ghostty --title "onboarding smoke"</code>.</p>
           </div>
         </div>
       </section>
@@ -349,7 +385,7 @@ Jumped to slackening · ttys101</code></pre>
       <section class="cta-band">
         <div>
           <div class="eyebrow">Ship more, context-switch less</div>
-          <h2>Try overwatchr on your own agent swarm.</h2>
+          <h2>Install once and prove value in your first 10 minutes.</h2>
         </div>
         <div class="cta-actions">
           <a class="button primary" href="https://github.com/atiti/overwatchr" target="_blank" rel="noreferrer">Open GitHub</a>
