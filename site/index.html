@@ -333,7 +333,8 @@ Jumped to slackening · ttys101</code></pre>
         <div class="install-band-copy">
           <div class="eyebrow">Get started</div>
           <h2>From zero to useful in minutes.</h2>
-          <p>Install the app, grant Accessibility, install hooks, and let your agent swarm get loud only when it actually matters.</p>
+          <p>Install the app, grant Accessibility, install hooks, then run a test alert so you can verify the full queue-and-jump loop before real work starts.</p>
+          <p>Success looks like this: the queue badge increments and your jump shortcut returns you to the target tab. If not, use the troubleshooting steps in <a href="https://github.com/atiti/overwatchr#if-activation-fails" target="_blank" rel="noreferrer">README activation fixes</a>.</p>
         </div>
         <div class="install-steps">
           <div class="step">
@@ -347,6 +348,10 @@ Jumped to slackening · ttys101</code></pre>
           <div class="step">
             <span>3</span>
             <p>Run <code>overwatchr hooks install all --scope user</code>.</p>
+          </div>
+          <div class="step">
+            <span>4</span>
+            <p>Run <code>overwatchr alert --agent onboarding-smoke --project first-run --terminal ghostty --title "onboarding smoke"</code>.</p>
           </div>
         </div>
       </section>
