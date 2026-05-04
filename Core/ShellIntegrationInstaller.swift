@@ -159,6 +159,16 @@ private extension ShellProfile {
               print -r -- "$tty_name"
             }
 
+            _overwatchr_export_tty() {
+              local tty_path
+              tty_path="$(tty 2>/dev/null || true)"
+              if [ -z "$tty_path" ] || [ "$tty_path" = "not a tty" ] || [ "$tty_path" = "/dev/tty" ]; then
+                unset OVERWATCHR_TTY
+                return 0
+              fi
+              export OVERWATCHR_TTY="$tty_path"
+            }
+
             _overwatchr_compute_title() {
               local base suffix
               base="${OVERWATCHR_TITLE_OVERRIDE:-${OVERWATCHR_PROJECT_NAME:-${PWD:t}}}"
@@ -202,6 +212,7 @@ private extension ShellProfile {
 
             _overwatchr_shell_title() {
               local title
+              _overwatchr_export_tty
               title="$(_overwatchr_compute_title)"
               if [ -n "$title" ]; then
                 export OVERWATCHR_TITLE="$title"
@@ -237,6 +248,16 @@ private extension ShellProfile {
               fi
               tty_name="${tty_path##*/}"
               printf '%s' "$tty_name"
+            }
+
+            _overwatchr_export_tty() {
+              local tty_path
+              tty_path="$(tty 2>/dev/null || true)"
+              if [ -z "$tty_path" ] || [ "$tty_path" = "not a tty" ] || [ "$tty_path" = "/dev/tty" ]; then
+                unset OVERWATCHR_TTY
+                return 0
+              fi
+              export OVERWATCHR_TTY="$tty_path"
             }
 
             _overwatchr_compute_title() {
@@ -282,6 +303,7 @@ private extension ShellProfile {
 
             _overwatchr_shell_title() {
               local title
+              _overwatchr_export_tty
               title="$(_overwatchr_compute_title)"
               if [ -n "$title" ]; then
                 export OVERWATCHR_TITLE="$title"
