@@ -96,12 +96,13 @@ fetch_release_asset_url() {
   local release_json
   release_json="$(curl -fsSL "$(release_api_url)")"
 
-  /usr/bin/python3 - "$suffix" <<'PY' <<<"$release_json"
+  RELEASE_JSON="$release_json" /usr/bin/python3 - "$suffix" <<'PY'
 import json
+import os
 import sys
 
 suffix = sys.argv[1]
-release = json.load(sys.stdin)
+release = json.loads(os.environ["RELEASE_JSON"])
 for asset in release.get("assets", []):
     name = asset.get("name", "")
     if name.endswith(suffix):
@@ -113,7 +114,6 @@ PY
 }
 
 install_from_release() {
-  local temp_dir
   temp_dir="$(mktemp -d /tmp/overwatchr-install.XXXXXX)"
   trap 'rm -rf "$temp_dir"' EXIT
 

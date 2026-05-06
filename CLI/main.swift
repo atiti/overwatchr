@@ -251,8 +251,12 @@ struct OverwatchrCLI {
     }
 
     private static func resolvedExecutablePath() -> String {
+        if let executableURL = Bundle.main.executableURL {
+            return executableURL.resolvingSymlinksInPath().path
+        }
+
         let executablePath = CommandLine.arguments.first ?? "overwatchr"
-        return URL(fileURLWithPath: executablePath).path
+        return URL(fileURLWithPath: executablePath).resolvingSymlinksInPath().path
     }
 
     private static func printEventStats(_ stats: EventLogStats) {
