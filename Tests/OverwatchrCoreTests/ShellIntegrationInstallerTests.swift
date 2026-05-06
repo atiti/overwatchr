@@ -16,11 +16,34 @@ final class ShellIntegrationInstallerTests: XCTestCase {
 
         XCTAssertTrue(rcContents.contains(#"source "$HOME/.config/overwatchr/shell.zsh""#))
         XCTAssertTrue(snippetContents.contains("_overwatchr_title_suffix()"))
+        XCTAssertTrue(snippetContents.contains("_overwatchr_export_tty()"))
         XCTAssertTrue(snippetContents.contains(#"${base} · ${suffix}"#))
+        XCTAssertTrue(snippetContents.contains("export OVERWATCHR_TTY=\"$tty_path\""))
         XCTAssertTrue(snippetContents.contains("export OVERWATCHR_TITLE=\"$title\""))
         XCTAssertTrue(snippetContents.contains(#"printf '\033]0;%s\007' "$title""#))
         XCTAssertTrue(snippetContents.contains(#"perform action ("set_tab_title:" & desiredTitle) on focused terminal of selected tab of front window"#))
         XCTAssertFalse(snippetContents.contains("codex() {"))
+    }
+
+    func testInstallBashWritesManagedSnippetAndSourceLine() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let installer = ShellIntegrationInstaller(userHomeDirectoryURL: root)
+        let result = try installer.install(shell: .bash)
+
+        let rcContents = try String(contentsOf: result.rcFile, encoding: .utf8)
+        let snippetContents = try String(contentsOf: result.snippetFile, encoding: .utf8)
+
+        XCTAssertTrue(rcContents.contains(#"source "$HOME/.config/overwatchr/shell.bash""#))
+        XCTAssertTrue(snippetContents.contains("_overwatchr_title_suffix()"))
+        XCTAssertTrue(snippetContents.contains("_overwatchr_export_tty()"))
+        XCTAssertTrue(snippetContents.contains(#"printf '%s · %s' "$base" "$suffix""#))
+        XCTAssertTrue(snippetContents.contains("export OVERWATCHR_TTY=\"$tty_path\""))
+        XCTAssertTrue(snippetContents.contains("export OVERWATCHR_TITLE=\"$title\""))
+        XCTAssertTrue(snippetContents.contains(#"printf '\033]0;%s\007' "$title""#))
     }
 
     func testInstallDoesNotDuplicateSourceLine() throws {
