@@ -193,14 +193,17 @@ The repository layout is:
 - CI builds and tests on macOS via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)
 - Tagged releases package the CLI and app via [`.github/workflows/release.yml`](./.github/workflows/release.yml)
 - release tags should use `v*`, for example `v0.1.0`
-- signed builds are enabled automatically when `MACOS_CODESIGN_IDENTITY` is present in GitHub Actions or `CODESIGN_IDENTITY` is set locally
-- notarization is enabled automatically when `MACOS_NOTARY_KEYCHAIN_PROFILE` is present in GitHub Actions or `NOTARY_KEYCHAIN_PROFILE` is set locally
+- tagged GitHub releases require Developer ID signing and notarization secrets; the workflow fails rather than publishing a Gatekeeper-blocked app
+- required release secrets are `MACOS_CODESIGN_IDENTITY`, `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD`
+- local signed builds use `CODESIGN_IDENTITY`; notarization can use either `NOTARY_KEYCHAIN_PROFILE` or direct Apple ID credentials
 
 Local signed release example:
 
 ```bash
 CODESIGN_IDENTITY="Developer ID Application: Example, Inc. (TEAMID1234)" \
-NOTARY_KEYCHAIN_PROFILE="overwatchr-notary" \
+APPLE_ID="dev@example.com" \
+APPLE_TEAM_ID="TEAMID1234" \
+APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx" \
 VERSION=0.2.1 \
 scripts/build_app_bundle.sh
 ```

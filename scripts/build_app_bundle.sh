@@ -11,6 +11,11 @@ VERSION="${VERSION#v}"
 CREATE_ARCHIVE="${CREATE_ARCHIVE:-1}"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
 NOTARY_KEYCHAIN_PROFILE="${NOTARY_KEYCHAIN_PROFILE:-}"
+APPLE_ID="${APPLE_ID:-}"
+APPLE_TEAM_ID="${APPLE_TEAM_ID:-}"
+APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-}"
+REQUIRE_SIGNING="${REQUIRE_SIGNING:-0}"
+REQUIRE_NOTARIZATION="${REQUIRE_NOTARIZATION:-0}"
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-dev.overwatchr.menubar}"
 
 mkdir -p "$DIST_DIR"
@@ -93,6 +98,10 @@ if [[ -n "$CODESIGN_IDENTITY" ]]; then
   codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" "$CLI_BINARY"
   codesign --force --timestamp --options runtime --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
 else
+  if [[ "$REQUIRE_SIGNING" == "1" ]]; then
+    echo "CODESIGN_IDENTITY is required for this release build." >&2
+    exit 1
+  fi
   echo "Ad-hoc signing app bundle for local macOS privacy permissions..."
   codesign --force --deep --sign - "$APP_BUNDLE"
 fi
@@ -106,9 +115,20 @@ if [[ "$CREATE_ARCHIVE" == "1" ]]; then
   ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$APP_ARCHIVE"
   ditto -c -k --keepParent "$CLI_BINARY" "$CLI_ARCHIVE"
 
+  notary_args=()
   if [[ -n "$NOTARY_KEYCHAIN_PROFILE" ]]; then
     echo "Submitting app archive for notarization with profile: $NOTARY_KEYCHAIN_PROFILE"
-    xcrun notarytool submit "$APP_ARCHIVE" --keychain-profile "$NOTARY_KEYCHAIN_PROFILE" --wait
+    notary_args=(--keychain-profile "$NOTARY_KEYCHAIN_PROFILE")
+  elif [[ -n "$APPLE_ID" && -n "$APPLE_TEAM_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" ]]; then
+    echo "Submitting app archive for notarization with Apple ID credentials."
+    notary_args=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD")
+  elif [[ "$REQUIRE_NOTARIZATION" == "1" ]]; then
+    echo "Notarization credentials are required for this release build." >&2
+    exit 1
+  fi
+
+  if [[ "${#notary_args[@]}" -gt 0 ]]; then
+    xcrun notarytool submit "$APP_ARCHIVE" "${notary_args[@]}" --wait
     xcrun stapler staple "$APP_BUNDLE"
     rm -f "$APP_ARCHIVE"
     ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$APP_ARCHIVE"

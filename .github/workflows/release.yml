@@ -13,9 +13,38 @@ jobs:
       contents: write
     env:
       CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
-      NOTARY_KEYCHAIN_PROFILE: ${{ secrets.MACOS_NOTARY_KEYCHAIN_PROFILE }}
+      MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
     steps:
       - uses: actions/checkout@v6
+      - name: Validate release signing secrets
+        run: |
+          missing=0
+          for name in CODESIGN_IDENTITY MACOS_CERTIFICATE_P12_BASE64 MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_SPECIFIC_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required release signing secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Import Developer ID certificate
+        env:
+          KEYCHAIN_PASSWORD: ${{ runner.temp }}-${{ github.run_id }}
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/overwatchr-signing.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/overwatchr-signing.keychain-db"
+
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
       - name: Test
         run: swift test
       - name: Build release binaries
@@ -23,9 +52,8 @@ jobs:
       - name: Package app and CLI
         run: |
           chmod +x scripts/build_app_bundle.sh install.sh scripts/smoke.sh
-          VERSION="${GITHUB_REF_NAME#v}" CREATE_ARCHIVE=1 scripts/build_app_bundle.sh
+          VERSION="${GITHUB_REF_NAME#v}" REQUIRE_SIGNING=1 REQUIRE_NOTARIZATION=1 CREATE_ARCHIVE=1 scripts/build_app_bundle.sh
       - name: Verify signed app bundle
-        if: env.CODESIGN_IDENTITY != ''
         run: |
           codesign --verify --deep --strict dist/Overwatchr.app
           spctl --assess --type execute --verbose=2 dist/Overwatchr.app
