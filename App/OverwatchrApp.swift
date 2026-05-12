@@ -880,6 +880,10 @@ private struct StatusItemLabel: View {
                     .renderingMode(.original)
                     .interpolation(.high)
                     .frame(width: 18, height: 14)
+            } else {
+                Image(systemName: "eye.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.primary)
             }
 
             if alertCount > 0 {
