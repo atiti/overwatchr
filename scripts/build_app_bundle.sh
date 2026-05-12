@@ -17,6 +17,7 @@ APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-}"
 REQUIRE_SIGNING="${REQUIRE_SIGNING:-0}"
 REQUIRE_NOTARIZATION="${REQUIRE_NOTARIZATION:-0}"
 APP_BUNDLE_ID="${APP_BUNDLE_ID:-dev.overwatchr.menubar}"
+APP_ENTITLEMENTS="$DIST_DIR/Overwatchr.entitlements"
 
 mkdir -p "$DIST_DIR"
 
@@ -93,10 +94,23 @@ printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 </plist>
 EOF
 
+/bin/cat > "$APP_ENTITLEMENTS" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+</dict>
+</plist>
+EOF
+
 if [[ -n "$CODESIGN_IDENTITY" ]]; then
   echo "Code signing app and CLI with identity: $CODESIGN_IDENTITY"
   codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" "$CLI_BINARY"
-  codesign --force --timestamp --options runtime --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+  codesign --force --timestamp --options runtime --entitlements "$APP_ENTITLEMENTS" --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
 else
   if [[ "$REQUIRE_SIGNING" == "1" ]]; then
     echo "CODESIGN_IDENTITY is required for this release build." >&2
