@@ -46,7 +46,7 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 
 install -m 755 "$APP_BINARY" "$APP_BUNDLE/Contents/MacOS/overwatchr-app"
 if [[ -n "$RESOURCE_BUNDLE" && -d "$RESOURCE_BUNDLE" ]]; then
-  cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/"
+  cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
 else
   echo "Missing SwiftPM resource bundle for Overwatchr.app" >&2
   exit 1
@@ -82,6 +82,8 @@ printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
   <true/>
   <key>NSAppleEventsUsageDescription</key>
   <string>Overwatchr needs Apple Events access to bring the right terminal window to the front.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Overwatchr needs microphone access while you hold the voice shortcut for dictation.</string>
 </dict>
 </plist>
 EOF
@@ -90,6 +92,9 @@ if [[ -n "$CODESIGN_IDENTITY" ]]; then
   echo "Code signing app and CLI with identity: $CODESIGN_IDENTITY"
   codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" "$CLI_BINARY"
   codesign --force --timestamp --options runtime --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+else
+  echo "Ad-hoc signing app bundle for local macOS privacy permissions..."
+  codesign --force --deep --sign - "$APP_BUNDLE"
 fi
 
 echo "Built app bundle at $APP_BUNDLE"

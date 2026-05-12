@@ -14,6 +14,12 @@ struct HotKeyConfiguration: Codable, Equatable, Sendable {
         keyLabel: "O"
     )
 
+    static let defaultVoice = HotKeyConfiguration(
+        keyCode: UInt32(kVK_Space),
+        modifiers: UInt32(controlKey | optionKey | cmdKey),
+        keyLabel: "Space"
+    )
+
     init(keyCode: UInt32, modifiers: UInt32, keyLabel: String) {
         self.keyCode = keyCode
         self.modifiers = modifiers
@@ -40,6 +46,11 @@ struct HotKeyConfiguration: Codable, Equatable, Sendable {
 
     var displayString: String {
         "\(modifierSymbols)\(keyLabel)"
+    }
+
+    func matches(event: NSEvent) -> Bool {
+        UInt32(event.keyCode) == keyCode
+            && Self.carbonModifiers(from: event.modifierFlags) == modifiers
     }
 
     private var modifierSymbols: String {

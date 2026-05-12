@@ -12,7 +12,7 @@ enum BrandPalette {
 
 enum BrandAssets {
     static func toolbarIconImage() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "toolbar_native", withExtension: "png"),
+        guard let url = resourceURL(for: "toolbar_native", extension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }
@@ -22,11 +22,28 @@ enum BrandAssets {
     }
 
     static func logoImage() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "logo_512", withExtension: "png"),
+        guard let url = resourceURL(for: "logo_512", extension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }
         return image
+    }
+
+    private static func resourceURL(for name: String, extension fileExtension: String) -> URL? {
+        let bundleName = "overwatchr_OverwatchrApp.bundle"
+        let candidates = [
+            Bundle.main.resourceURL?.appendingPathComponent(bundleName),
+            Bundle.main.bundleURL.appendingPathComponent(bundleName),
+            Bundle.module.bundleURL
+        ].compactMap { $0 }
+
+        for bundleURL in candidates {
+            if let bundle = Bundle(url: bundleURL),
+               let url = bundle.url(forResource: name, withExtension: fileExtension) {
+                return url
+            }
+        }
+        return nil
     }
 }
 #endif

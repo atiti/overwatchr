@@ -174,7 +174,7 @@ public struct IntegrationInstaller {
         export const OverwatchrPlugin = async () => {
           return {
             event: async ({ event }) => {
-              if (event?.type !== "session.idle" && event?.type !== "session.end" && event?.type !== "session.completed") {
+              if (event?.type !== "session.idle" && event?.type !== "session.end" && event?.type !== "session.completed" && event?.type !== "permission.asked") {
                 return
               }
 
@@ -193,7 +193,7 @@ public struct IntegrationInstaller {
             tool: .opencode,
             scope: scope,
             files: [pluginURL],
-            notes: ["OpenCode plugin installed for session.idle alerts."]
+            notes: ["OpenCode plugin installed for session.idle alerts and permission.asked notifications."]
         )
     }
 

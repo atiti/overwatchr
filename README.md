@@ -25,6 +25,7 @@ overwatchr gives you:
 
 - a menu bar queue of live agent pings
 - a global jump shortcut you can change in settings
+- a hold-to-talk voice shortcut for dictating into the focused app with Azure Speech
 - native terminal focusing for Ghostty, iTerm, and Terminal.app
 - local `seen` behavior so opened alerts drop out until the next new event
 - hook installers for Codex CLI, Claude Code, and OpenCode
@@ -84,6 +85,27 @@ That sets up:
 - Claude Code via `~/.claude/settings.json`
 - OpenCode via `~/.config/opencode/plugins/overwatchr.js`
 - interactive shell title syncing via `~/.config/overwatchr/shell.zsh`
+
+## Voice Input
+
+Overwatchr can dictate into the currently focused app. In settings, save an Azure Speech key, set the Speech resource region such as `eastus`, and optionally adjust the locale list. Then hold the voice shortcut, speak, and release to insert the transcription.
+
+Defaults:
+
+- Voice shortcut: `⌃⌥⌘Space`
+- Provider: Azure Speech Services short-audio recognition
+- Locales: `en-US` by default, or comma-separated candidates such as `en-US,hu-HU` for automatic best-result selection
+- Submit phrase mode: strips terminal phrases such as `press enter` and sends Return
+
+The Azure Speech key is stored in Keychain. For development runs launched from a shell, these environment variables are also recognized:
+
+```bash
+AZURE_SPEECH_KEY=...
+AZURE_SPEECH_REGION=eastus
+AZURE_SPEECH_ENDPOINT=https://your-resource.cognitiveservices.azure.com
+```
+
+Voice input requires Microphone permission to capture audio and Accessibility permission to paste text and send Return.
 
 Project-local setup also works:
 

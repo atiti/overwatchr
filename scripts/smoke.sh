@@ -57,8 +57,8 @@ if command -v osascript >/dev/null 2>&1; then
   osascript -e 'tell application "Finder" to activate' >/dev/null
   sleep 1
 
-  echo "Sending Cmd+Shift+A..."
-  osascript -e 'tell application "System Events" to keystroke "A" using {command down, shift down}' >/dev/null
+  echo "Sending Ctrl+Option+Cmd+O..."
+  osascript -e 'tell application "System Events" to keystroke "o" using {control down, option down, command down}' >/dev/null
   sleep 2
 
   FRONTMOST="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' | tr -d '\r')"

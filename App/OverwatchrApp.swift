@@ -4,7 +4,10 @@ import Carbon
 import OverwatchrCore
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let model = AppModel()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !activateExistingInstanceIfNeeded() else {
             NSApp.terminate(nil)
@@ -39,15 +42,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct OverwatchrMenuBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var model = AppModel()
 
     var body: some Scene {
         MenuBarExtra {
-            StatusMenuView(model: model)
+            StatusMenuView(model: appDelegate.model)
                 .frame(width: 380)
         } label: {
-            StatusItemLabel(alertCount: model.alertCount)
-                .help(model.alertCount == 0 ? "overwatchr is watching quietly" : "overwatchr has \(model.alertCount) active alert(s)")
+            StatusItemLabel(alertCount: appDelegate.model.alertCount)
+                .help(appDelegate.model.alertCount == 0 ? "overwatchr is watching quietly" : "overwatchr has \(appDelegate.model.alertCount) active alert(s)")
         }
         .menuBarExtraStyle(.window)
     }
@@ -56,6 +58,8 @@ struct OverwatchrMenuBarApp: App {
 private struct StatusMenuView: View {
     @ObservedObject var model: AppModel
     @State private var showingSettings = false
+    @State private var appSettingsExpanded = true
+    @State private var voiceSettingsExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -73,6 +77,8 @@ private struct StatusMenuView: View {
                 endPoint: .bottomTrailing
             )
         )
+        .frame(width: 380)
+        .frame(height: showingSettings ? 620 : nil)
         .animation(.easeInOut(duration: 0.16), value: showingSettings)
     }
 
@@ -178,7 +184,7 @@ private struct StatusMenuView: View {
             HStack {
                 Text("Last refresh \(model.lastUpdatedAt.formatted(date: .omitted, time: .shortened))")
                 Spacer()
-                Text("\(AppVersion.displayString) · Jump: \(model.hotKeyConfiguration.displayString)")
+                Text("\(AppVersion.displayString) · Jump: \(model.hotKeyConfiguration.displayString) · Voice: \(model.voiceHotKeyConfiguration.displayString)")
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.56))
@@ -204,80 +210,29 @@ private struct StatusMenuView: View {
                 Spacer()
             }
 
-            settingsCard
-
-            VStack(alignment: .leading, spacing: 10) {
-                SettingsRow(
-                    title: "Jump shortcut",
-                    subtitle: "Choose the global key combo that teleports you to the next ping."
-                ) {
-                    ShortcutRecorder(
-                        configuration: model.hotKeyConfiguration,
-                        onChange: { model.setHotKeyConfiguration($0) },
-                        onReset: { model.resetHotKeyConfiguration() }
-                    )
-                }
-
-                if let shellStatus = model.shellIntegrationStatus {
-                    SettingsRow(
-                        title: "Shell title sync",
-                        subtitle: shellStatus.installed
-                            ? "Installed for \(shellStatus.shell.rawValue). New terminal tabs will export OVERWATCHR_TITLE."
-                            : "Not installed for \(shellStatus.shell.rawValue). Ghostty jumps work best with the managed shell snippet."
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 10) {
+                    CollapsibleSettingsSection(
+                        title: "App",
+                        subtitle: "Queue, launch, sounds, and permissions",
+                        systemImage: "switch.2",
+                        isExpanded: $appSettingsExpanded
                     ) {
-                        ShellStatusBadge(installed: shellStatus.installed)
+                        appSettingsRows
+                    }
+
+                    CollapsibleSettingsSection(
+                        title: "Voice",
+                        subtitle: model.voiceEnabled ? "Hold-to-talk is enabled" : "Optional dictation support",
+                        systemImage: model.voiceEnabled ? "mic.fill" : "mic.slash.fill",
+                        isExpanded: $voiceSettingsExpanded
+                    ) {
+                        voiceSettingsRows
                     }
                 }
-
-                SettingsRow(
-                    title: "Launch at login",
-                    subtitle: "Start overwatchr automatically after you sign in."
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { model.launchAtLoginEnabled },
-                        set: { model.setLaunchAtLoginEnabled($0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                SettingsRow(
-                    title: "Alert chime",
-                    subtitle: "Play a small Glass chime when a fresh ping arrives."
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { model.alertChimeEnabled },
-                        set: { model.setAlertChimeEnabled($0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                SettingsRow(
-                    title: "Jump sound",
-                    subtitle: "Play a small hero sound when you teleport into the queue."
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { model.jumpSoundEnabled },
-                        set: { model.setJumpSoundEnabled($0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                }
-
-                SettingsRow(
-                    title: "Accessibility",
-                    subtitle: model.accessibilityTrusted ? "Window focusing permissions look good." : "Needed for reliable terminal focusing."
-                ) {
-                    Button("Open") {
-                        model.openAccessibilitySettings()
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.white)
-                }
+                .padding(.vertical, 2)
             }
-            .padding(14)
-            .background(cardBackground)
+            .frame(maxHeight: .infinity)
 
             if let launchAtLoginMessage = model.launchAtLoginMessage {
                 Text(launchAtLoginMessage)
@@ -291,7 +246,11 @@ private struct StatusMenuView: View {
                     .foregroundStyle(Color.orange.opacity(0.88))
             }
 
-            Spacer()
+            if let voiceMessage = model.voiceMessage {
+                Text(voiceMessage)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.68))
+            }
 
             HStack {
                 Button("Quit Overwatchr") {
@@ -309,29 +268,171 @@ private struct StatusMenuView: View {
         }
     }
 
-    private var settingsCard: some View {
-        HStack(spacing: 12) {
-            if let image = BrandAssets.logoImage() {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("overwatchr")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text("Tracks agent pings and brings the right terminal forward.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.white.opacity(0.7))
-            }
-
-            Spacer()
+    @ViewBuilder
+    private var voiceSettingsRows: some View {
+        SettingsRow(
+            title: "Voice input",
+            subtitle: "Enable hold-to-talk dictation."
+        ) {
+            Toggle("", isOn: Binding(
+                get: { model.voiceEnabled },
+                set: { model.setVoiceEnabled($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
         }
-        .padding(14)
-        .background(cardBackground)
+
+        SettingsRow(
+            title: "Voice shortcut",
+            subtitle: "Hold to dictate into the focused app."
+        ) {
+            ShortcutRecorder(
+                configuration: model.voiceHotKeyConfiguration,
+                onChange: { model.setVoiceHotKeyConfiguration($0) },
+                onReset: { model.resetVoiceHotKeyConfiguration() }
+            )
+        }
+
+        SettingsRow(
+            title: "Azure Speech key",
+            subtitle: model.azureSpeechKeyConfigured ? "Saved in Keychain." : "Required for voice transcription."
+        ) {
+            VoiceKeyField(onSave: { model.saveAzureSpeechKey($0) })
+        }
+
+        SettingsRow(
+            title: "Azure region",
+            subtitle: "Speech resource region, unless using a full endpoint."
+        ) {
+            VoiceTextField(
+                placeholder: "eastus",
+                text: Binding(
+                    get: { model.azureSpeechRegion },
+                    set: { model.setAzureSpeechRegion($0) }
+                )
+            )
+        }
+
+        SettingsRow(
+            title: "Azure endpoint",
+            subtitle: "Optional custom Speech endpoint."
+        ) {
+            VoiceTextField(
+                placeholder: "https://...",
+                text: Binding(
+                    get: { model.azureSpeechEndpoint },
+                    set: { model.setAzureSpeechEndpoint($0) }
+                )
+            )
+        }
+
+        SettingsRow(
+            title: "Voice locales",
+            subtitle: "One or more Azure locales, comma-separated for auto-pick."
+        ) {
+            VoiceTextField(
+                placeholder: "en-US,hu-HU",
+                text: Binding(
+                    get: { model.azureSpeechLanguage },
+                    set: { model.setAzureSpeechLanguage($0) }
+                )
+            )
+        }
+
+        SettingsRow(
+            title: "Voice submit",
+            subtitle: "Handle phrases like press enter."
+        ) {
+            VoiceSubmitModePicker(
+                selection: Binding(
+                    get: { model.voiceSubmitMode },
+                    set: { model.setVoiceSubmitMode($0) }
+                )
+            )
+        }
+
+        SettingsRow(
+            title: "Microphone",
+            subtitle: "Needed when holding the voice shortcut."
+        ) {
+            Button("Open") {
+                model.openMicrophoneSettings()
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.white)
+        }
+    }
+
+    @ViewBuilder
+    private var appSettingsRows: some View {
+        SettingsRow(
+            title: "Jump shortcut",
+            subtitle: "Choose the global key combo that teleports you to the next ping."
+        ) {
+            ShortcutRecorder(
+                configuration: model.hotKeyConfiguration,
+                onChange: { model.setHotKeyConfiguration($0) },
+                onReset: { model.resetHotKeyConfiguration() }
+            )
+        }
+
+        if let shellStatus = model.shellIntegrationStatus {
+            SettingsRow(
+                title: "Shell title sync",
+                subtitle: shellStatus.installed
+                    ? "Installed for \(shellStatus.shell.rawValue). New terminal tabs will export OVERWATCHR_TITLE."
+                    : "Not installed for \(shellStatus.shell.rawValue). Ghostty jumps work best with the managed shell snippet."
+            ) {
+                ShellStatusBadge(installed: shellStatus.installed)
+            }
+        }
+
+        SettingsRow(
+            title: "Launch at login",
+            subtitle: "Start overwatchr automatically after you sign in."
+        ) {
+            Toggle("", isOn: Binding(
+                get: { model.launchAtLoginEnabled },
+                set: { model.setLaunchAtLoginEnabled($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+        }
+
+        SettingsRow(
+            title: "Alert chime",
+            subtitle: "Play a small Glass chime when a fresh ping arrives."
+        ) {
+            Toggle("", isOn: Binding(
+                get: { model.alertChimeEnabled },
+                set: { model.setAlertChimeEnabled($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+        }
+
+        SettingsRow(
+            title: "Jump sound",
+            subtitle: "Play a small hero sound when you teleport into the queue."
+        ) {
+            Toggle("", isOn: Binding(
+                get: { model.jumpSoundEnabled },
+                set: { model.setJumpSoundEnabled($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+        }
+
+        SettingsRow(
+            title: "Accessibility",
+            subtitle: model.accessibilityTrusted ? "Window focusing and voice insertion permissions look good." : "Needed for reliable focusing and voice insertion."
+        ) {
+            Button("Open") {
+                model.openAccessibilitySettings()
+            }
+            .buttonStyle(.borderless)
+                .foregroundStyle(.white)
+        }
     }
 
     private var cardBackground: some View {
@@ -372,6 +473,8 @@ private struct ShortcutRecorder: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white.opacity(0.72))
+
+            Spacer(minLength: 0)
         }
         .onDisappear {
             stopRecording()
@@ -429,6 +532,174 @@ private struct ShellStatusBadge: View {
             Capsule(style: .continuous)
                 .fill(Color.white.opacity(0.08))
         )
+    }
+}
+
+private struct SettingsSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.48))
+                .padding(.horizontal, 2)
+
+            VStack(alignment: .leading, spacing: 1) {
+                content
+            }
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.07))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    )
+            )
+        }
+    }
+}
+
+private struct CollapsibleSettingsSection<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    @Binding var isExpanded: Bool
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.14)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(BrandPalette.accent)
+                        .frame(width: 26, height: 26)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(0.08))
+                        )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text(subtitle)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.56))
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.5))
+                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                }
+                .padding(12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Divider()
+                    .overlay(Color.white.opacity(0.08))
+                    .padding(.horizontal, 12)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    content
+                }
+                .padding(.vertical, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        )
+    }
+}
+
+private struct VoiceTextField: View {
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+        .textFieldStyle(.plain)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+            )
+    }
+}
+
+private struct VoiceKeyField: View {
+    let onSave: (String) -> Void
+    @State private var key = ""
+
+    var body: some View {
+        HStack(spacing: 6) {
+            SecureField("key", text: $key)
+                .textFieldStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                )
+
+            Button("Save") {
+                onSave(key)
+                key = ""
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.86))
+        }
+    }
+}
+
+private struct VoiceSubmitModePicker: View {
+    @Binding var selection: VoiceSubmitMode
+
+    var body: some View {
+        Picker("", selection: $selection) {
+            ForEach(VoiceSubmitMode.allCases, id: \.self) { mode in
+                Text(label(for: mode)).tag(mode)
+            }
+        }
+        .labelsHidden()
+        .frame(maxWidth: .infinity)
+    }
+
+    private func label(for mode: VoiceSubmitMode) -> String {
+        switch mode {
+        case .disabled:
+            return "Off"
+        case .stripAndSubmit:
+            return "Strip + enter"
+        case .keepAndSubmit:
+            return "Keep + enter"
+        }
     }
 }
 
@@ -647,18 +918,24 @@ private struct SettingsRow<Accessory: View>: View {
     @ViewBuilder let accessory: Accessory
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(subtitle)
                     .font(.system(size: 11))
                     .foregroundStyle(Color.white.opacity(0.66))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
             accessory
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
     }
 }
 

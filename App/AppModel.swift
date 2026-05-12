@@ -15,17 +15,30 @@ final class AppModel: ObservableObject {
     @Published private(set) var alertChimeEnabled = false
     @Published private(set) var jumpSoundEnabled = true
     @Published private(set) var hotKeyConfiguration = HotKeyConfiguration.default
+    @Published private(set) var voiceEnabled = false
+    @Published private(set) var voiceHotKeyConfiguration = HotKeyConfiguration.defaultVoice
+    @Published private(set) var azureSpeechRegion = ""
+    @Published private(set) var azureSpeechEndpoint = ""
+    @Published private(set) var azureSpeechLanguage = "en-US"
+    @Published private(set) var voiceSubmitMode: VoiceSubmitMode = .stripAndSubmit
+    @Published private(set) var azureSpeechKeyConfigured = false
+    @Published private(set) var voiceState: VoiceInteractionDisplayState = .idle
     @Published private(set) var shellIntegrationStatus: ShellIntegrationStatus?
     @Published var launchAtLoginMessage: String?
     @Published var hotKeyMessage: String?
+    @Published var voiceMessage: String?
 
     let store: EventStore
 
     private var preferences: AppPreferences
     private let seenStore: SeenAlertStore
     private let focusEngine = FocusEngine()
-    private let hotKeyMonitor = GlobalHotKeyMonitor()
+    private let hotKeyMonitor = GlobalHotKeyMonitor(id: 1)
+    private let voiceCarbonHotKeyMonitor = GlobalHotKeyMonitor(id: 2)
+    private let voiceHotKeyMonitor = VoiceHoldKeyMonitor()
     private let shellIntegrationInstaller = ShellIntegrationInstaller()
+    private let voiceKeychainStore = VoiceKeychainStore()
+    private let azureSpeechKeyAccount = "azureSpeechKey"
     private var hasStarted = false
     private var currentAlerts: [AgentEvent] = []
     private var seenLedger: SeenAlertLedger
@@ -33,6 +46,17 @@ final class AppModel: ObservableObject {
     private lazy var watcher = EventWatcher(store: store) { [weak self] update in
         self?.applyAlertUpdate(update.currentAlerts, newEvents: update.newEvents)
     }
+    private lazy var voiceController = VoiceInteractionController(
+        configurationProvider: { [weak self] in
+            guard let self else {
+                throw AzureSpeechProviderError.missingKey
+            }
+            return try self.azureSpeechProviderConfiguration()
+        },
+        submitModeProvider: { [weak self] in
+            self?.voiceSubmitMode ?? .stripAndSubmit
+        }
+    )
 
     init(
         store: EventStore = EventStore(),
@@ -46,6 +70,18 @@ final class AppModel: ObservableObject {
         self.alertChimeEnabled = preferences.alertChimeEnabled
         self.jumpSoundEnabled = preferences.jumpSoundEnabled
         self.hotKeyConfiguration = preferences.hotKeyConfiguration
+        self.voiceEnabled = preferences.voiceEnabled
+        self.voiceHotKeyConfiguration = preferences.voiceHotKeyConfiguration
+        self.azureSpeechRegion = preferences.azureSpeechRegion
+        self.azureSpeechEndpoint = preferences.azureSpeechEndpoint
+        self.azureSpeechLanguage = preferences.azureSpeechLanguage
+        self.voiceSubmitMode = preferences.voiceSubmitMode
+        self.azureSpeechKeyConfigured = voiceKeychainStore.exists(account: azureSpeechKeyAccount)
+        self.voiceController.onStateChange = { [weak self] state, message in
+            self?.voiceState = state
+            self?.voiceMessage = message
+        }
+        VoiceDiagnosticLog.write("appModelInit")
         start()
     }
 
@@ -63,6 +99,7 @@ final class AppModel: ObservableObject {
         refreshShellIntegrationStatus()
         watcher.start()
         registerHotKey()
+        registerVoiceHotKey()
     }
 
     func focusNextAlert() {
@@ -125,6 +162,15 @@ final class AppModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
+    func openMicrophoneSettings() {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        ) else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
     func setLaunchAtLoginEnabled(_ enabled: Bool) {
         do {
             if enabled {
@@ -159,6 +205,69 @@ final class AppModel: ObservableObject {
 
     func resetHotKeyConfiguration() {
         setHotKeyConfiguration(.default)
+    }
+
+    func setVoiceHotKeyConfiguration(_ configuration: HotKeyConfiguration) {
+        voiceHotKeyConfiguration = configuration
+        preferences.voiceHotKeyConfiguration = configuration
+        registerVoiceHotKey()
+    }
+
+    func setVoiceEnabled(_ enabled: Bool) {
+        voiceEnabled = enabled
+        preferences.voiceEnabled = enabled
+        if enabled {
+            registerVoiceHotKey()
+            voiceMessage = "Voice input enabled. Checking microphone access..."
+            Task { @MainActor in
+                let granted = await AudioCaptureService.requestMicrophoneAccess()
+                VoiceDiagnosticLog.write("microphonePermissionRequested granted=\(granted)")
+                guard voiceEnabled else {
+                    return
+                }
+                voiceMessage = granted
+                    ? "Voice input enabled."
+                    : "Voice input enabled, but microphone access is denied."
+            }
+        } else {
+            unregisterVoiceHotKey()
+            voiceController.cancel()
+            voiceMessage = "Voice input disabled."
+        }
+    }
+
+    func resetVoiceHotKeyConfiguration() {
+        setVoiceHotKeyConfiguration(.defaultVoice)
+    }
+
+    func setAzureSpeechRegion(_ value: String) {
+        azureSpeechRegion = value
+        preferences.azureSpeechRegion = value
+    }
+
+    func setAzureSpeechEndpoint(_ value: String) {
+        azureSpeechEndpoint = value
+        preferences.azureSpeechEndpoint = value
+    }
+
+    func setAzureSpeechLanguage(_ value: String) {
+        azureSpeechLanguage = value
+        preferences.azureSpeechLanguage = value
+    }
+
+    func setVoiceSubmitMode(_ mode: VoiceSubmitMode) {
+        voiceSubmitMode = mode
+        preferences.voiceSubmitMode = mode
+    }
+
+    func saveAzureSpeechKey(_ value: String) {
+        do {
+            try voiceKeychainStore.write(value, account: azureSpeechKeyAccount)
+            azureSpeechKeyConfigured = !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            voiceMessage = azureSpeechKeyConfigured ? "Azure Speech key saved." : "Azure Speech key cleared."
+        } catch {
+            voiceMessage = error.localizedDescription
+        }
     }
 
     func clearVisibleAlerts() {
@@ -197,6 +306,64 @@ final class AppModel: ObservableObject {
             hotKeyMessage = error.localizedDescription
             feedbackMessage = error.localizedDescription
         }
+    }
+
+    private func registerVoiceHotKey() {
+        guard voiceEnabled else {
+            unregisterVoiceHotKey()
+            VoiceDiagnosticLog.write("voiceHotKeyDisabled")
+            return
+        }
+
+        do {
+            try voiceCarbonHotKeyMonitor.register(
+                configuration: voiceHotKeyConfiguration,
+                pressed: { [weak self] in
+                    VoiceDiagnosticLog.write("voiceCarbonPressed")
+                    self?.voiceController.beginCapture()
+                },
+                released: { [weak self] in
+                    VoiceDiagnosticLog.write("voiceCarbonReleased")
+                    self?.voiceController.finishCapture()
+                }
+            )
+            VoiceDiagnosticLog.write("voiceCarbonHotKeyRegistered key=\(voiceHotKeyConfiguration.displayString)")
+            voiceHotKeyMonitor.unregister()
+        } catch {
+            VoiceDiagnosticLog.write("voiceCarbonHotKeyRegistrationFailed error=\(error.localizedDescription)")
+            voiceHotKeyMonitor.register(
+                configuration: voiceHotKeyConfiguration,
+                pressed: { [weak self] in
+                    self?.voiceController.beginCapture()
+                },
+                released: { [weak self] in
+                    self?.voiceController.finishCapture()
+                }
+            )
+        }
+    }
+
+    private func unregisterVoiceHotKey() {
+        voiceCarbonHotKeyMonitor.unregister()
+        voiceHotKeyMonitor.unregister()
+    }
+
+    private func azureSpeechProviderConfiguration() throws -> AzureSpeechProviderConfiguration {
+        let environment = ProcessInfo.processInfo.environment
+        let key = try voiceKeychainStore.read(account: azureSpeechKeyAccount)
+            ?? environment["AZURE_SPEECH_KEY"]
+            ?? ""
+        let region = azureSpeechRegion.nilIfBlank
+            ?? environment["AZURE_SPEECH_REGION"]
+            ?? ""
+        let endpoint = azureSpeechEndpoint.nilIfBlank
+            ?? environment["AZURE_SPEECH_ENDPOINT"]
+        return AzureSpeechProviderConfiguration(
+            key: key,
+            region: region,
+            endpoint: endpoint,
+            language: azureSpeechLanguage.nilIfBlank ?? "en-US"
+        )
     }
 
     private func refreshLaunchAtLoginStatus() {
@@ -281,6 +448,13 @@ final class AppModel: ObservableObject {
         }
 
         return "Jumped to \(target) and marked it seen.\(suffix)"
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 #endif
