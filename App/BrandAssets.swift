@@ -34,7 +34,9 @@ enum BrandAssets {
         let candidates = [
             Bundle.main.resourceURL?.appendingPathComponent(bundleName),
             Bundle.main.bundleURL.appendingPathComponent(bundleName),
-            Bundle.module.bundleURL
+            Bundle.main.bundleURL
+                .deletingLastPathComponent()
+                .appendingPathComponent(bundleName)
         ].compactMap { $0 }
 
         for bundleURL in candidates {
