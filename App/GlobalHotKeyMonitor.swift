@@ -51,14 +51,14 @@ final class GlobalHotKeyMonitor {
 
         let callback: EventHandlerUPP = { _, event, userData in
             guard let userData else {
-                return noErr
+                return OSStatus(eventNotHandledErr)
             }
 
             let monitor = Unmanaged<GlobalHotKeyMonitor>
                 .fromOpaque(userData)
                 .takeUnretainedValue()
             guard monitor.matches(event: event) else {
-                return noErr
+                return OSStatus(eventNotHandledErr)
             }
             if let event, GetEventKind(event) == UInt32(kEventHotKeyReleased) {
                 monitor.releasedAction?()
