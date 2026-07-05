@@ -34,6 +34,19 @@ final class EventStoreTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [first, second])
     }
 
+    func testAppendCreatesFileWithOwnerOnlyPermissions() throws {
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = temporaryDirectory.appendingPathComponent("events.jsonl")
+        let store = EventStore(fileURL: fileURL)
+
+        try store.append(AgentEvent(agentID: "copy", project: "landing", status: .needsInput, timestamp: 123))
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue
+        XCTAssertEqual(permissions, 0o600)
+    }
+
     func testReadSkipsMalformedLines() throws {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

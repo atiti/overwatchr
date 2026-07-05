@@ -47,6 +47,18 @@ final class AzureSpeechTranscriptionTests: XCTestCase {
         )
     }
 
+    func testRejectsNonHTTPSEndpoint() {
+        let configuration = AzureSpeechConfiguration(
+            region: "",
+            endpoint: "http://custom.example.com/",
+            language: "en-US"
+        )
+
+        XCTAssertThrowsError(try AzureSpeechShortAudioRequest.url(for: configuration)) { error in
+            XCTAssertEqual(error as? AzureSpeechTranscriptionError, .invalidEndpoint("http://custom.example.com/"))
+        }
+    }
+
     func testSplitsLanguageCandidates() {
         let configuration = AzureSpeechConfiguration(
             region: "westeurope",

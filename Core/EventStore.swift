@@ -50,7 +50,11 @@ public struct EventStore: Sendable {
         let directoryURL = fileURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         if !FileManager.default.fileExists(atPath: fileURL.path) {
-            _ = FileManager.default.createFile(atPath: fileURL.path, contents: Data())
+            _ = FileManager.default.createFile(
+                atPath: fileURL.path,
+                contents: Data(),
+                attributes: [.posixPermissions: 0o600]
+            )
         }
     }
 
@@ -65,7 +69,7 @@ public struct EventStore: Sendable {
         }
         line.append(lineBreak)
 
-        let descriptor = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+        let descriptor = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR)
         guard descriptor >= 0 else {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
@@ -137,7 +141,7 @@ public struct EventStore: Sendable {
     public func replaceAll(with events: [AgentEvent]) throws {
         try ensureStorage()
 
-        let descriptor = open(fileURL.path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+        let descriptor = open(fileURL.path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR)
         guard descriptor >= 0 else {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }

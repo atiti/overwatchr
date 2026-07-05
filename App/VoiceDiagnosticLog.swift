@@ -23,7 +23,11 @@ struct VoiceDiagnosticLog {
                 handle.write(data)
                 handle.closeFile()
             } else {
-                try data.write(to: fileURL)
+                _ = FileManager.default.createFile(
+                    atPath: fileURL.path,
+                    contents: data,
+                    attributes: [.posixPermissions: 0o600]
+                )
             }
         } catch {
             // Diagnostics must never break voice input.

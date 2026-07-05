@@ -31,9 +31,8 @@ jobs:
           done
           exit "$missing"
       - name: Import Developer ID certificate
-        env:
-          KEYCHAIN_PASSWORD: ${{ runner.temp }}-${{ github.run_id }}
         run: |
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 32)"
           CERTIFICATE_PATH="$RUNNER_TEMP/overwatchr-signing.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/overwatchr-signing.keychain-db"
 

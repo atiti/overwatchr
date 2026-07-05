@@ -32,4 +32,15 @@ final class TerminalApplicationTests: XCTestCase {
         XCTAssertNotNil(script)
         XCTAssertTrue(script?.contains("tty of current session of current tab of front window") == true)
     }
+
+    func testOtherActivationScriptEscapesBackslashBeforeQuote() {
+        let terminal = TerminalApplication(name: #"Evil\" Terminal"#)
+        let scripts = terminal.appleScriptActivationCommands
+
+        XCTAssertEqual(scripts.count, 1)
+        // A raw backslash-quote in the name must not let the parser interpret
+        // `\\` as an escaped backslash immediately followed by an unescaped
+        // quote, which would terminate the AppleScript string literal early.
+        XCTAssertTrue(scripts.first?.contains(#"tell application "Evil\\\" Terminal""#) == true)
+    }
 }

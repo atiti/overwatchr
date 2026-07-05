@@ -61,7 +61,7 @@ public enum AzureSpeechShortAudioRequest {
     public static func url(for configuration: AzureSpeechConfiguration) throws -> URL {
         let baseURL: URL
         if let endpoint = configuration.endpoint {
-            guard let parsed = URL(string: endpoint) else {
+            guard let parsed = URL(string: endpoint), parsed.scheme?.lowercased() == "https" else {
                 throw AzureSpeechTranscriptionError.invalidEndpoint(endpoint)
             }
             baseURL = normalizedSpeechEndpoint(parsed, fallbackRegion: configuration.region)

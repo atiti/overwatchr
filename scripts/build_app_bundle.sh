@@ -135,7 +135,7 @@ if [[ "$CREATE_ARCHIVE" == "1" ]]; then
     notary_args=(--keychain-profile "$NOTARY_KEYCHAIN_PROFILE")
   elif [[ -n "$APPLE_ID" && -n "$APPLE_TEAM_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" ]]; then
     echo "Submitting app archive for notarization with Apple ID credentials."
-    notary_args=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD")
+    notary_args=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "@env:APPLE_APP_SPECIFIC_PASSWORD")
   elif [[ "$REQUIRE_NOTARIZATION" == "1" ]]; then
     echo "Notarization credentials are required for this release build." >&2
     exit 1

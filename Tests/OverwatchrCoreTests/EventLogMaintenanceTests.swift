@@ -47,6 +47,21 @@ final class EventLogMaintenanceTests: XCTestCase {
         XCTAssertEqual(retained.map(\.status), [.done, .error])
     }
 
+    func testCompactWritesBackupWithOwnerOnlyPermissions() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let fileURL = root.appendingPathComponent("events.jsonl")
+        let store = EventStore(fileURL: fileURL)
+        try store.append(AgentEvent(agentID: "copy", project: "landing", status: .needsInput, timestamp: 100))
+
+        let result = try EventLogMaintenance(store: store).compact()
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: result.backupFileURL.path)
+        let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue
+        XCTAssertEqual(permissions, 0o600)
+    }
+
     func testPruneDropsOldHistoryButKeepsLatestEventPerAgent() throws {
         let root = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

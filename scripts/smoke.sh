@@ -23,7 +23,8 @@ echo "Building release binaries..."
 swift build -c "$BUILD_CONFIGURATION" --package-path "$ROOT_DIR" >/dev/null
 
 echo "Launching menu bar app..."
-"$ROOT_DIR/.build/${BUILD_CONFIGURATION}/overwatchr-app" >/tmp/overwatchr-smoke.log 2>&1 &
+SMOKE_LOG="$(mktemp /tmp/overwatchr-smoke.XXXXXX.log)"
+"$ROOT_DIR/.build/${BUILD_CONFIGURATION}/overwatchr-app" >"$SMOKE_LOG" 2>&1 &
 APP_PID="$!"
 sleep 2
 
@@ -76,7 +77,7 @@ else
 fi
 
 if [[ "${CAPTURE_SCREEN:-0}" == "1" ]]; then
-  SCREENSHOT_PATH="${SCREENSHOT_PATH:-/tmp/overwatchr-smoke.png}"
+  SCREENSHOT_PATH="${SCREENSHOT_PATH:-$(mktemp /tmp/overwatchr-smoke.XXXXXX.png)}"
   screencapture -x "$SCREENSHOT_PATH"
   echo "Captured screenshot at $SCREENSHOT_PATH"
 fi

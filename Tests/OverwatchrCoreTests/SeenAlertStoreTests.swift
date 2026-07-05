@@ -16,4 +16,17 @@ final class SeenAlertStoreTests: XCTestCase {
 
         XCTAssertEqual(loaded, ledger)
     }
+
+    func testSaveCreatesFileWithOwnerOnlyPermissions() throws {
+        let tempDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = tempDirectory.appendingPathComponent("seen.json")
+        let store = SeenAlertStore(fileURL: fileURL)
+
+        try store.save(SeenAlertLedger())
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue
+        XCTAssertEqual(permissions, 0o600)
+    }
 }

@@ -141,6 +141,7 @@ public struct EventLogMaintenance: Sendable {
         let backupURL = store.fileURL.deletingLastPathComponent()
             .appendingPathComponent("events.backup-\(formatter.string(from: Date())).jsonl")
         try data.write(to: backupURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: backupURL.path)
         return backupURL
     }
 }
