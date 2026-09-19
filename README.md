@@ -175,6 +175,7 @@ Queue behavior:
 - if the stopping session is already frontmost, overwatchr records the event but auto-marks it seen so you do not get a redundant queue item
 - opening an alert marks it `seen` locally, so it disappears until a newer event arrives
 - `done` clears it from the active stream
+- alerts from a previous macOS boot are ignored because their terminal sessions no longer exist
 - optional alert chime lives in the menu bar settings pane
 
 Maintenance commands:

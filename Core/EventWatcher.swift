@@ -9,6 +9,7 @@ public struct EventWatcherUpdate: Sendable {
 public final class EventWatcher: NSObject {
     private let store: EventStore
     private let interval: TimeInterval
+    private let minimumEventTimestamp: TimeInterval
     private let onUpdate: (EventWatcherUpdate) -> Void
 
     private var timer: Timer?
@@ -18,10 +19,12 @@ public final class EventWatcher: NSObject {
     public init(
         store: EventStore = EventStore(),
         interval: TimeInterval = 1.0,
+        minimumEventTimestamp: TimeInterval = SystemBootTime.timestamp(),
         onUpdate: @escaping (EventWatcherUpdate) -> Void
     ) {
         self.store = store
         self.interval = interval
+        self.minimumEventTimestamp = minimumEventTimestamp
         self.onUpdate = onUpdate
     }
 
@@ -50,7 +53,7 @@ public final class EventWatcher: NSObject {
             let batch = try store.readEvents(from: 0)
             readOffset = batch.nextOffset
             queue = AlertQueue()
-            queue.apply(batch.events)
+            queue.apply(currentSessionEvents(from: batch.events))
             emit(newEvents: [])
         } catch {
             emit(newEvents: [])
@@ -72,8 +75,9 @@ public final class EventWatcher: NSObject {
                 return
             }
 
-            queue.apply(batch.events)
-            emit(newEvents: batch.events)
+            let newEvents = currentSessionEvents(from: batch.events)
+            queue.apply(newEvents)
+            emit(newEvents: newEvents)
         } catch {
             emit(newEvents: [])
         }
@@ -81,5 +85,9 @@ public final class EventWatcher: NSObject {
 
     private func emit(newEvents: [AgentEvent]) {
         onUpdate(EventWatcherUpdate(newEvents: newEvents, currentAlerts: queue.alerts))
+    }
+
+    private func currentSessionEvents(from events: [AgentEvent]) -> [AgentEvent] {
+        events.filter { $0.timestamp >= minimumEventTimestamp }
     }
 }

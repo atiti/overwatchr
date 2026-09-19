@@ -48,8 +48,7 @@ struct OverwatchrMenuBarApp: App {
             StatusMenuView(model: appDelegate.model)
                 .frame(width: 380)
         } label: {
-            StatusItemLabel(alertCount: appDelegate.model.alertCount)
-                .help(appDelegate.model.alertCount == 0 ? "overwatchr is watching quietly" : "overwatchr has \(appDelegate.model.alertCount) active alert(s)")
+            StatusItemLabel(model: appDelegate.model)
         }
         .menuBarExtraStyle(.window)
     }
@@ -871,7 +870,7 @@ private struct AlertRow: View {
 }
 
 private struct StatusItemLabel: View {
-    let alertCount: Int
+    @ObservedObject var model: AppModel
 
     var body: some View {
         HStack(spacing: 5) {
@@ -886,14 +885,15 @@ private struct StatusItemLabel: View {
                     .foregroundStyle(.primary)
             }
 
-            if alertCount > 0 {
-                Text("\(alertCount)")
+            if model.alertCount > 0 {
+                Text("\(model.alertCount)")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white)
             }
         }
-        .accessibilityLabel("overwatchr \(alertCount) active alerts")
+        .help(model.alertCount == 0 ? "overwatchr is watching quietly" : "overwatchr has \(model.alertCount) active alert(s)")
+        .accessibilityLabel("overwatchr \(model.alertCount) active alerts")
     }
 }
 
