@@ -306,10 +306,12 @@ public struct IntegrationInstaller {
     }
 
     private func quoted(_ string: String) -> String {
-        if string.contains(" ") {
-            return "\"\(string.replacingOccurrences(of: "\"", with: "\\\""))\""
-        }
-        return string
+        let escaped = string
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "$", with: "\\$")
+            .replacingOccurrences(of: "`", with: "\\`")
+        return "\"\(escaped)\""
     }
 
     private func jsonStringLiteral(_ string: String) -> String {

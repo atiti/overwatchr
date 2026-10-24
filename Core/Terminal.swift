@@ -85,9 +85,12 @@ public enum TerminalApplication: Equatable, Sendable {
                 """
             ]
         case .other(let name):
+            let escapedName = name
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
             return [
                 """
-                tell application "\(name.replacingOccurrences(of: "\"", with: "\\\""))"
+                tell application "\(escapedName)"
                     activate
                 end tell
                 """

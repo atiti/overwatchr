@@ -106,7 +106,32 @@ final class IntegrationInstallerTests: XCTestCase {
             .flatMap { $0["hooks"] as? [[String: Any]] ?? [] }
             .compactMap { $0["command"] as? String }
 
-        XCTAssertEqual(commands, ["/usr/local/bin/overwatchr hook-run claude"])
+        XCTAssertEqual(commands, ["\"/usr/local/bin/overwatchr\" hook-run claude"])
+    }
+
+    func testCodexHookCommandEscapesShellMetacharactersInBinaryPath() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let installer = IntegrationInstaller(
+            fileManager: .default,
+            userHomeDirectoryURL: root.appendingPathComponent("home", isDirectory: true)
+        )
+
+        _ = try installer.install(
+            tool: .codex,
+            scope: .project,
+            projectDirectoryURL: root,
+            overwatchrBinaryPath: #"/tmp/$(touch pwned)/overwatchr"#
+        )
+
+        let hooksData = try Data(contentsOf: root.appendingPathComponent(".codex/hooks.json"))
+        let hooksObject = try JSONSerialization.jsonObject(with: hooksData) as? [String: Any]
+        let hooks = hooksObject?["hooks"] as? [String: Any]
+        let stopGroups = hooks?["Stop"] as? [[String: Any]] ?? []
+        let commands = stopGroups
+            .flatMap { $0["hooks"] as? [[String: Any]] ?? [] }
+            .compactMap { $0["command"] as? String }
+
+        XCTAssertEqual(commands, [#""/tmp/\$(touch pwned)/overwatchr" hook-run codex"#])
     }
 
     func testOpenCodeInstallWritesPlugin() throws {

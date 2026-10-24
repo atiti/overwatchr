@@ -29,6 +29,7 @@ public struct SeenAlertStore: Sendable {
         encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(ledger)
         try data.write(to: fileURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
     }
 
     private func ensureStorageDirectory() throws {

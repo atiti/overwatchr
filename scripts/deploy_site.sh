@@ -31,10 +31,8 @@ if [[ -z "$STAGING_DIR" ]]; then
 fi
 
 mkdir -p "$STAGING_DIR"
-chmod 777 "$STAGING_DIR"
 cp -R "$SITE_DIR"/. "$STAGING_DIR"/
 mkdir -p "$STAGING_DIR/.wrangler/tmp"
-chmod 777 "$STAGING_DIR/.wrangler" "$STAGING_DIR/.wrangler/tmp"
 
 cmd=(
   privateinfractl pages
