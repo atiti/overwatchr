@@ -61,6 +61,19 @@ public final class FocusEngine {
             throw FocusError.missingTerminal
         }
 
+        if event.zellijSession != nil {
+            try ZellijFocus.focus(event: event)
+            // Target the outer Zellij terminal; the inner Codex TTY is not an
+            // emulator tab. The session name is a useful title fallback.
+            try focus(
+                target: FocusTarget(terminalName: terminal, ttyPath: event.tty,
+                                    titleSubstring: event.zellijSession),
+                titleQueries: [event.zellijSession].compactMap { $0 },
+                workingDirectoryQueries: []
+            )
+            return
+        }
+
         let workingDirectoryQueries = [event.project, event.title]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }

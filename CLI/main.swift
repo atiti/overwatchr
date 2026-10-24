@@ -109,6 +109,9 @@ struct OverwatchrCLI {
             terminal: parsed.options["terminal"],
             tty: parsed.options["tty"],
             title: parsed.options["title"],
+            zellijSession: parsed.options["zellij-session"],
+            zellijPaneID: parsed.options["zellij-pane-id"].flatMap(Int.init),
+            zellijThreadID: parsed.options["zellij-thread-id"],
             timestamp: parsed.options["timestamp"].flatMap(TimeInterval.init) ?? Date().timeIntervalSince1970
         )
     }

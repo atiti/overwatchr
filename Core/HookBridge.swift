@@ -75,6 +75,21 @@ public struct HookBridgeInput: Sendable {
 
 public enum HookBridge {
     public static func action(for input: HookBridgeInput) -> HookBridgeAction {
+        let action = rawAction(for: input)
+        guard case .emit(let event) = action,
+              let target = ZellijTarget.resolve(environment: input.environment, agentID: event.agentID) else {
+            return action
+        }
+        return .emit(AgentEvent(
+            agentID: event.agentID, project: event.project, status: event.status,
+            terminal: target.terminal ?? event.terminal, tty: target.tty,
+            title: event.title, zellijSession: target.session, zellijPaneID: target.paneID,
+            zellijThreadID: target.thread,
+            timestamp: event.timestamp
+        ))
+    }
+
+    private static func rawAction(for input: HookBridgeInput) -> HookBridgeAction {
         switch input.tool {
         case .codex:
             return codexAction(for: input)
