@@ -33,6 +33,9 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
     public let terminal: String?
     public let tty: String?
     public let title: String?
+    public let zellijSession: String?
+    public let zellijPaneID: Int?
+    public let zellijThreadID: String?
     public let timestamp: TimeInterval
 
     public init(
@@ -42,6 +45,9 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
         terminal: String? = nil,
         tty: String? = nil,
         title: String? = nil,
+        zellijSession: String? = nil,
+        zellijPaneID: Int? = nil,
+        zellijThreadID: String? = nil,
         timestamp: TimeInterval = Date().timeIntervalSince1970
     ) {
         self.agentID = agentID
@@ -50,6 +56,9 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
         self.terminal = terminal?.nilIfBlank
         self.tty = tty?.nilIfBlank
         self.title = title?.nilIfBlank
+        self.zellijSession = zellijSession?.nilIfBlank
+        self.zellijPaneID = zellijPaneID
+        self.zellijThreadID = zellijThreadID
         self.timestamp = timestamp
     }
 
@@ -81,6 +90,9 @@ public struct AgentEvent: Codable, Equatable, Identifiable, Sendable {
         case terminal
         case tty
         case title
+        case zellijSession = "zellij_session"
+        case zellijPaneID = "zellij_pane_id"
+        case zellijThreadID = "zellij_thread_id"
         case timestamp
     }
 }

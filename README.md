@@ -262,3 +262,27 @@ scripts/build_app_bundle.sh
 ## Contributing
 
 Bug reports, hook integrations, terminal support fixes, and installer hardening are all welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## Zellij and AgentRoute
+
+Alerts can include `zellij_session`, `zellij_pane_id`, and (for managed Codex chats)
+`zellij_thread_id`. Focus validates the live pane, selects it through Zellij's CLI,
+then raises its outer terminal window. Zellij 0.45.1+ must be installed. Old events
+remain compatible. Alerts are not auto-acknowledged merely because another pane in
+the same terminal is frontmost.
+
+Standalone hooks detect `ZELLIJ_SESSION_NAME` and `ZELLIJ_PANE_ID`. With AgentRoute's
+`ar` cockpit, hooks running in the shared owner read per-chat addresses from
+`$AGENTROUTE_HOME/shared-server/<CODEX_HOME hash>/zellij-targets/`. Start/attach with
+`ar` to record the outer terminal's name and TTY. Keep its board running to receive
+mid-turn approval/input notifications; ordinary turn completion uses Codex Stop hooks.
+
+For other producers:
+
+```sh
+overwatchr alert --agent example --terminal ghostty --tty /dev/ttys012 \
+  --zellij-session agentroute --zellij-pane-id 3
+```
+
+The release workflow can also build a signed, notarized installation artifact with
+a numeric `version` input through workflow_dispatch. This does not publish a release.

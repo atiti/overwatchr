@@ -21,6 +21,9 @@ public struct FrontmostSessionContext: Equatable, Sendable {
 
 public enum FrontmostSessionMatcher {
     public static func matches(event: AgentEvent, context: FrontmostSessionContext) -> Bool {
+        // Every pane can share the outer terminal's TTY/title. Do not silently
+        // acknowledge another pane's alert from that coarse match.
+        guard event.zellijSession == nil else { return false }
         let eventTerminal = TerminalApplication(name: event.terminal ?? "")
         let contextTerminal = TerminalApplication(name: context.terminalName)
 
