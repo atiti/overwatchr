@@ -84,7 +84,14 @@ final class AppModel: ObservableObject {
             guard let self else { return }
             let agentID = "codex-\(update.sessionID)"
             let queuedAlert = self.alerts.first { $0.agentID == agentID }
-            let event = queuedAlert ?? AgentEvent(agentID: agentID, project: update.project, status: .needsInput)
+            // The card knows the chat's real title, which Herdr panes display.
+            let event = AgentEvent(
+                agentID: agentID, project: queuedAlert?.project ?? update.project, status: queuedAlert?.status ?? .needsInput,
+                terminal: queuedAlert?.terminal, tty: queuedAlert?.tty, title: update.title ?? queuedAlert?.title,
+                zellijSession: queuedAlert?.zellijSession, zellijPaneID: queuedAlert?.zellijPaneID,
+                zellijThreadID: queuedAlert?.zellijThreadID, herdrPaneID: queuedAlert?.herdrPaneID,
+                herdrSocketPath: queuedAlert?.herdrSocketPath
+            )
             try self.focusEngine.focus(event: event)
             if let queuedAlert { self.markSeen(queuedAlert) }
             self.playJumpSoundIfEnabled()
