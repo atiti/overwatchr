@@ -36,6 +36,12 @@ overwatchr gives you:
 - local `seen` behavior so opened alerts drop out until the next new event
 - hook installers for Codex CLI, Claude Code, and OpenCode
 
+### Agent progress overlay
+
+In the menu bar popover, open **Settings → App → Agent progress overlay** to show short updates from local top-level Codex sessions. Up to three glass cards appear in the upper-right corner of the display you are working on. Each session keeps one card, which disappears after about nine seconds. Hover to hold the stack while you read. The cards are silent and clicks pass through to your current app.
+
+Overwatchr reads Codex commentary from the local session directory. The overlay is off by default.
+
 ## Install
 
 One-line install:

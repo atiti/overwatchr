@@ -12,6 +12,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var accessibilityTrusted = AXIsProcessTrusted()
     @Published private(set) var lastUpdatedAt = Date()
     @Published private(set) var launchAtLoginEnabled = false
+    @Published private(set) var agentProgressOverlayEnabled = false
     @Published private(set) var alertChimeEnabled = false
     @Published private(set) var jumpSoundEnabled = true
     @Published private(set) var hotKeyConfiguration = HotKeyConfiguration.default
@@ -32,6 +33,7 @@ final class AppModel: ObservableObject {
 
     private var preferences: AppPreferences
     private let seenStore: SeenAlertStore
+    private let progressOverlay = AgentProgressOverlay()
     private let focusEngine = FocusEngine()
     private let hotKeyMonitor = GlobalHotKeyMonitor(id: 1)
     private let voiceCarbonHotKeyMonitor = GlobalHotKeyMonitor(id: 2)
@@ -67,6 +69,7 @@ final class AppModel: ObservableObject {
         self.seenStore = seenStore
         self.preferences = preferences
         self.seenLedger = (try? seenStore.load()) ?? SeenAlertLedger()
+        self.agentProgressOverlayEnabled = preferences.agentProgressOverlayEnabled
         self.alertChimeEnabled = preferences.alertChimeEnabled
         self.jumpSoundEnabled = preferences.jumpSoundEnabled
         self.hotKeyConfiguration = preferences.hotKeyConfiguration
@@ -98,6 +101,7 @@ final class AppModel: ObservableObject {
         refreshLaunchAtLoginStatus()
         refreshShellIntegrationStatus()
         watcher.start()
+        progressOverlay.setEnabled(agentProgressOverlayEnabled)
         registerHotKey()
         registerVoiceHotKey()
     }
@@ -185,6 +189,12 @@ final class AppModel: ObservableObject {
             launchAtLoginMessage = error.localizedDescription
             refreshLaunchAtLoginStatus()
         }
+    }
+
+    func setAgentProgressOverlayEnabled(_ enabled: Bool) {
+        agentProgressOverlayEnabled = enabled
+        preferences.agentProgressOverlayEnabled = enabled
+        progressOverlay.setEnabled(enabled)
     }
 
     func setAlertChimeEnabled(_ enabled: Bool) {

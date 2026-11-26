@@ -399,6 +399,18 @@ private struct StatusMenuView: View {
         }
 
         SettingsRow(
+            title: "Agent progress overlay",
+            subtitle: "Show recent Codex updates. Hover to keep a card visible."
+        ) {
+            Toggle("Agent progress overlay", isOn: Binding(
+                get: { model.agentProgressOverlayEnabled },
+                set: { model.setAgentProgressOverlayEnabled($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+        }
+
+        SettingsRow(
             title: "Alert chime",
             subtitle: "Play a small Glass chime when a fresh ping arrives."
         ) {
