@@ -57,7 +57,36 @@ public enum HerdrFocus {
                 return HerdrTarget(socketPath: socketPath, paneID: recorded)
             }
         }
+        // Some panes run Codex without reporting a chat ID. Herdr still shows the
+        // chat's title there, so match on that, then on a lone pane in the project.
+        for socketPath in socketPaths {
+            guard let result = try? request(socketPath, "pane.list", [:]),
+                  let panes = result["panes"] as? [[String: Any]] else { continue }
+            let unclaimed = panes.filter { pane in
+                let value = ((pane["agent_session"] as? [String: Any])?["value"] as? String)?.lowercased()
+                return value == nil || value == sessionID
+            }
+            if let title = event.title, let pane = unclaimed.first(where: {
+                titleMatches(title, paneTitle: $0["terminal_title_stripped"] as? String ?? $0["terminal_title"] as? String,
+                             project: event.project)
+            }), let id = pane["pane_id"] as? String {
+                return HerdrTarget(socketPath: socketPath, paneID: id)
+            }
+        }
         return nil
+    }
+
+    /// Herdr titles read `<chat title> | <folder>` and may cut the chat title short.
+    static func titleMatches(_ title: String, paneTitle: String?, project: String?) -> Bool {
+        guard let paneTitle else { return false }
+        var parts = paneTitle.components(separatedBy: " | ")
+        let folder = parts.count > 1 ? parts.removeLast() : nil
+        var shown = parts.joined(separator: " | ").lowercased()
+        while shown.hasSuffix("…") || shown.hasSuffix(".") { shown.removeLast() }
+        let wanted = title.lowercased()
+        guard shown.count >= 6 else { return false }
+        if let folder, let project, folder.lowercased() != project.lowercased() { return false }
+        return wanted == shown || wanted.hasPrefix(shown)
     }
 
     /// Focuses the alert's pane. Returns false when no Herdr pane belongs to the alert.

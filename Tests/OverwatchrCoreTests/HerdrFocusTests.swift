@@ -35,6 +35,24 @@ final class HerdrFocusTests: XCTestCase {
         XCTAssertNil(locate(owner: "another-chat"))
     }
 
+    func testFindsPaneWithoutChatIDByItsTitle() {
+        let event = AgentEvent(agentID: "codex-\(chat)", project: "workspace", status: .needsInput,
+                               title: "Markster Direkt private preview and pilot")
+        func pane(_ id: String, _ title: String, owner: String? = nil) -> [String: Any] {
+            var entry: [String: Any] = ["pane_id": id, "terminal_title_stripped": title]
+            if let owner { entry["agent_session"] = ["value": owner] }
+            return entry
+        }
+        let list: [String: Any] = ["panes": [
+            pane("a:p1", "Other chat | workspace"),
+            pane("b:p1", "Markster Direkt private preview and pilot | markster-core"),
+            pane("c:p1", "Markster Direkt private preview and pilot | workspace", owner: "someone-else"),
+            pane("d:p1", "Markster Direkt private preview a... | workspace"),
+        ]]
+        let target = HerdrFocus.locate(event: event, socketPaths: ["/a.sock"]) { _, _, _ in list }
+        XCTAssertEqual(target?.paneID, "d:p1")
+    }
+
     func testUnreachableSocketsAreSkipped() {
         let event = AgentEvent(agentID: "codex-\(chat)", status: .needsInput)
         let target = HerdrFocus.locate(event: event, socketPaths: ["/dead.sock", "/live.sock"]) { socket, _, _ in
