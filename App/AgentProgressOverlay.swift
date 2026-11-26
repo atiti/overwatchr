@@ -13,8 +13,10 @@ final class AgentProgressOverlay {
         var expiresAt: TimeInterval
         var slot: Int
         var isExpanded = false
+        var error: String?
     }
 
+    var onJump: ((CodexProgress) throws -> Void)?
     private let reader = CodexProgressReader()
     private let size = NSSize(width: 340, height: 88)
     private let expandedWidth: CGFloat = 440
@@ -66,7 +68,7 @@ final class AgentProgressOverlay {
         if cards.isEmpty {
             screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         }
-        let content = ClickableHostingView(rootView: ProgressCard(update: update, isExpanded: false, onToggle: {}))
+        let content = ClickableHostingView(rootView: ProgressCard(update: update, isExpanded: false, error: nil, onToggle: {}, onJump: {}, onDismiss: {}))
         let panel = makePanel(content: content)
         var card = Card(
             sessionID: update.sessionID, panel: panel, content: content,
@@ -143,8 +145,30 @@ final class AgentProgressOverlay {
         ProgressCard(
             update: card.update,
             isExpanded: card.isExpanded,
-            onToggle: { [weak self, sessionID = card.sessionID] in self?.toggleExpansion(of: sessionID) }
+            error: card.error,
+            onToggle: { [weak self, sessionID = card.sessionID] in self?.toggleExpansion(of: sessionID) },
+            onJump: { [weak self, sessionID = card.sessionID] in self?.jump(to: sessionID) },
+            onDismiss: { [weak self, sessionID = card.sessionID] in self?.dismiss(sessionID) }
         )
+    }
+
+    private func dismiss(_ sessionID: String) {
+        guard let index = cards.firstIndex(where: { $0.sessionID == sessionID }) else { return }
+        cards.remove(at: index).panel.orderOut(nil)
+        layout()
+    }
+
+    private func jump(to sessionID: String) {
+        guard let index = cards.firstIndex(where: { $0.sessionID == sessionID }) else { return }
+        do {
+            try onJump?(cards[index].update)
+            dismiss(sessionID)
+        } catch {
+            cards[index].error = error.localizedDescription
+            cards[index].isExpanded = true
+            cards[index].content.rootView = progressCard(for: cards[index])
+            layout()
+        }
     }
 
     private func toggleExpansion(of sessionID: String) {
@@ -217,7 +241,10 @@ private func inlineMarkdown(_ text: String) -> AttributedString {
 private struct ProgressCard: View {
     let update: CodexProgress
     let isExpanded: Bool
+    let error: String?
     let onToggle: () -> Void
+    let onJump: () -> Void
+    let onDismiss: () -> Void
 
     private var heading: String {
         if let title = update.title { return title }
@@ -239,7 +266,8 @@ private struct ProgressCard: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                VStack(alignment: .leading, spacing: 1) {
+                HStack(alignment: .top, spacing: 6) {
+                  VStack(alignment: .leading, spacing: 1) {
                     Text(heading)
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
@@ -247,6 +275,19 @@ private struct ProgressCard: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                  }
+                  Spacer(minLength: 0)
+                  Button(action: onJump) {
+                      Label("Jump", systemImage: "arrow.up.right")
+                  }
+                  .buttonStyle(.borderless)
+                  .font(.system(size: 11, weight: .semibold))
+                  Button(action: onDismiss) { Image(systemName: "xmark") }
+                      .buttonStyle(.borderless)
+                      .accessibilityLabel("Dismiss notification")
+                }
+                if let error {
+                    Text(error).font(.system(size: 11)).foregroundStyle(.red)
                 }
                 if isExpanded {
                     ScrollView {
@@ -271,8 +312,15 @@ private struct ProgressCard: View {
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: onToggle)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 30)
+                .onEnded { value in
+                    if abs(value.translation.width) > 70 &&
+                        abs(value.translation.width) > abs(value.translation.height) {
+                        onDismiss()
+                    }
+                }
+        )
     }
 }
 
