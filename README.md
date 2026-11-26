@@ -38,7 +38,7 @@ overwatchr gives you:
 
 ### Agent progress overlay
 
-In the menu bar popover, open **Settings → App → Agent progress overlay** to show short updates from local top-level Codex sessions. Up to three glass cards appear in the upper-right corner of the display you are working on. Each session keeps one card, which disappears after about nine seconds. Hover to hold the stack while you read. The cards are silent and clicks pass through to your current app.
+In the menu bar popover, open **Settings → App → Agent progress overlay** to show short updates from local top-level Codex sessions. Up to three glass cards appear in the upper-right corner of the display you are working on. Each session keeps one card, which disappears after about nine seconds. Hover to hold the stack while you read. Click a card to expand it into the full, formatted message, and click again to collapse it. The cards are silent and never take keyboard focus.
 
 Overwatchr reads Codex assistant messages from the local session directory. The overlay is off by default.
 

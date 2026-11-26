@@ -61,7 +61,7 @@ final class CodexProgressMonitor {
                 delivered[update.sessionID] = update.timestamp
                 return true
             }
-            if !fresh.isEmpty { onUpdates(fresh) }
+            if !fresh.isEmpty { onUpdates(fresh.map(reader.attachingTitle(to:))) }
         }
     }
 }

@@ -33,6 +33,7 @@ final class CodexProgressReaderTests: XCTestCase {
             XCTAssertEqual(updates.map(\.sessionID), ["main", "finished", "untagged"])
             XCTAssertEqual(updates.first?.project, "overwatchr")
             XCTAssertEqual(updates.first?.message, "Build passed. Checking the release.")
+            XCTAssertEqual(updates.first?.body, "Build passed.\nChecking the release.")
             XCTAssertEqual(updates.map(\.message).suffix(2), ["All done: PR merged.", "Model without a phase tag"])
         }
     }
@@ -50,6 +51,31 @@ final class CodexProgressReaderTests: XCTestCase {
             let updates = CodexProgressReader(sessionsDirectory: directory)
                 .latestUpdates(since: now.addingTimeInterval(-30), now: now)
             XCTAssertEqual(updates.map(\.message), ["Latest complete update"])
+        }
+    }
+
+    func testAttachesLatestChatNameAndIgnoresPlaceholders() throws {
+        try withSessionDirectory { directory in
+            let index = directory.appendingPathComponent("session_index.jsonl")
+            let lines = [
+                ["id": "named", "thread_name": "New chat"],
+                ["id": "other", "thread_name": "Unrelated"],
+                ["id": "named", "thread_name": "Fix the overlay"],
+                ["id": "unnamed", "thread_name": "New chat"],
+                ["id": "guarded", "thread_name": "Guardian review"]
+            ]
+            let data = try lines.map { try JSONSerialization.data(withJSONObject: $0) }
+                .reduce(into: Data()) { $0.append($1); $0.append(10) }
+            try data.write(to: index)
+            let reader = CodexProgressReader(sessionsDirectory: directory, sessionIndexURL: index)
+
+            func progress(_ id: String) -> CodexProgress {
+                CodexProgress(sessionID: id, project: "p", message: "m", body: "m", timestamp: now)
+            }
+            XCTAssertEqual(reader.attachingTitle(to: progress("named")).title, "Fix the overlay")
+            XCTAssertNil(reader.attachingTitle(to: progress("unnamed")).title)
+            XCTAssertNil(reader.attachingTitle(to: progress("guarded")).title)
+            XCTAssertNil(reader.attachingTitle(to: progress("missing")).title)
         }
     }
 

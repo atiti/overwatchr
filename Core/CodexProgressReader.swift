@@ -4,17 +4,42 @@ public struct CodexProgress: Equatable, Sendable {
     public let sessionID: String
     public let project: String
     public let message: String
+    /// The complete message with its original line breaks and Markdown.
+    public let body: String
     public let timestamp: Date
+    /// The chat's name from Codex, when it has one.
+    public var title: String?
 }
 
 public struct CodexProgressReader: Sendable {
     public let sessionsDirectory: URL
+    public let sessionIndexURL: URL
 
-    public init(sessionsDirectory: URL? = nil) {
+    public init(sessionsDirectory: URL? = nil, sessionIndexURL: URL? = nil) {
         let codexHome = ProcessInfo.processInfo.environment["CODEX_HOME"]
             .flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0, isDirectory: true) }
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")
         self.sessionsDirectory = sessionsDirectory ?? codexHome.appendingPathComponent("sessions")
+        self.sessionIndexURL = sessionIndexURL ?? codexHome.appendingPathComponent("session_index.jsonl")
+    }
+
+    /// Looks up the chat's current name. Codex appends a line to its index on every rename.
+    public func attachingTitle(to progress: CodexProgress) -> CodexProgress {
+        var titled = progress
+        titled.title = title(forSessionID: progress.sessionID)
+        return titled
+    }
+
+    private func title(forSessionID sessionID: String) -> String? {
+        guard let index = try? Data(contentsOf: sessionIndexURL, options: .mappedIfSafe),
+              let idBytes = sessionID.data(using: .utf8) else { return nil }
+        let entries = index.split(separator: 10)
+            .filter { $0.range(of: idBytes) != nil }
+            .compactMap { record($0) }
+            .filter { $0["id"] as? String == sessionID }
+        guard let name = (entries.last?["thread_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty, !["New chat", "Guardian review"].contains(name) else { return nil }
+        return name
     }
 
     public var canonicalDirectory: URL {
@@ -100,13 +125,15 @@ public struct CodexProgressReader: Sendable {
                   timestamp >= cutoff, timestamp <= now,
                   let content = message["content"] as? [[String: Any]] else { continue }
 
-            let text = content.compactMap { part in
+            let rawText = content.compactMap { part in
                 part["type"] as? String == "output_text" ? part["text"] as? String : nil
-            }.joined(separator: " ").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            }.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = MarkdownBlockParser.previewText(for: MarkdownBlockParser.parse(rawText))
             guard !text.isEmpty else { continue }
             let project = (payload["cwd"] as? String).map { URL(fileURLWithPath: $0).lastPathComponent }
             let preview = text.count > 300 ? String(text.prefix(299)) + "…" : text
-            return CodexProgress(sessionID: sessionID, project: project ?? "", message: preview, timestamp: timestamp)
+            let body = rawText.count > 20_000 ? String(rawText.prefix(19_999)) + "…" : rawText
+            return CodexProgress(sessionID: sessionID, project: project ?? "", message: preview, body: body, timestamp: timestamp)
         }
         return nil
     }
