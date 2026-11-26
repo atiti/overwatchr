@@ -21,6 +21,27 @@ public struct CodexProgressReader: Sendable {
         canonicalURL(sessionsDirectory) ?? sessionsDirectory
     }
 
+    /// Rollout files in today's and yesterday's day folders, for both local and UTC dates.
+    public func recentFiles(now: Date = Date()) -> Set<URL> {
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = .current
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .current
+        let days = [now, now.addingTimeInterval(-86_400)]
+        let folders = Set(days.flatMap { day in
+            [local, utc].map { calendar -> URL in
+                let parts = calendar.dateComponents([.year, .month, .day], from: day)
+                return canonicalDirectory
+                    .appendingPathComponent(String(format: "%04d", parts.year ?? 0))
+                    .appendingPathComponent(String(format: "%02d", parts.month ?? 0))
+                    .appendingPathComponent(String(format: "%02d", parts.day ?? 0))
+            }
+        })
+        return Set(folders.flatMap { folder in
+            (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        })
+    }
+
     public func latestUpdates(
         since cutoff: Date, now: Date = Date(), changedFiles: Set<URL>? = nil
     ) -> [CodexProgress] {

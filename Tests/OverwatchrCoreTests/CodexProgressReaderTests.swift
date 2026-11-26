@@ -53,6 +53,19 @@ final class CodexProgressReaderTests: XCTestCase {
         }
     }
 
+    func testRecentFilesCoversTodayAndYesterdayOnly() throws {
+        try withSessionDirectory { directory in
+            for day in ["2026/11/26", "2026/11/25", "2026/11/20"] {
+                let folder = directory.appendingPathComponent(day)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                try Data().write(to: folder.appendingPathComponent("rollout-\(day.suffix(2)).jsonl"))
+            }
+            let names = CodexProgressReader(sessionsDirectory: directory).recentFiles(now: now)
+                .map(\.lastPathComponent).sorted()
+            XCTAssertEqual(names, ["rollout-25.jsonl", "rollout-26.jsonl"])
+        }
+    }
+
     private func withSessionDirectory(_ body: (URL) throws -> Void) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
