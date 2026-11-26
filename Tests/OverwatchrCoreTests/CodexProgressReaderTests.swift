@@ -5,12 +5,15 @@ import XCTest
 final class CodexProgressReaderTests: XCTestCase {
     private let now = ISO8601DateFormatter().date(from: "2026-11-26T10:01:00Z")!
 
-    func testShowsOnlyLatestNamedCommentaryFromMainSessions() throws {
+    func testShowsLatestCommentaryOrFinalAnswerFromMainSessions() throws {
         try withSessionDirectory { directory in
             try writeRollout("main", source: "vscode", threadSource: "user", lines: [
                 message("Older update", time: "2026-11-26T10:00:45.000Z"),
                 message("  Build passed.\nChecking the release. ", time: "2026-11-26T10:00:55.100Z"),
-                message("Final answer", phase: "final_answer", time: "2026-11-26T10:00:56Z")
+            ], in: directory)
+            try writeRollout("finished", source: "vscode", lines: [
+                message("Working", time: "2026-11-26T10:00:50Z"),
+                message("All done: PR merged.", phase: "final_answer", time: "2026-11-26T10:00:56Z")
             ], in: directory)
             try writeRollout("child", source: ["subagent": "review"], lines: [
                 message("Child commentary", time: "2026-11-26T10:00:58Z")
@@ -24,9 +27,10 @@ final class CodexProgressReaderTests: XCTestCase {
 
             let updates = CodexProgressReader(sessionsDirectory: directory)
                 .latestUpdates(since: now.addingTimeInterval(-30), now: now)
-            XCTAssertEqual(updates.map(\.sessionID), ["main"])
+            XCTAssertEqual(updates.map(\.sessionID), ["main", "finished"])
             XCTAssertEqual(updates.first?.project, "overwatchr")
             XCTAssertEqual(updates.first?.message, "Build passed. Checking the release.")
+            XCTAssertEqual(updates.last?.message, "All done: PR merged.")
         }
     }
 
