@@ -76,17 +76,26 @@ public struct HookBridgeInput: Sendable {
 public enum HookBridge {
     public static func action(for input: HookBridgeInput) -> HookBridgeAction {
         let action = rawAction(for: input)
-        guard case .emit(let event) = action,
-              let target = ZellijTarget.resolve(environment: input.environment, agentID: event.agentID) else {
-            return action
+        guard case .emit(let event) = action else { return action }
+
+        if let target = ZellijTarget.resolve(environment: input.environment, agentID: event.agentID) {
+            return .emit(AgentEvent(
+                agentID: event.agentID, project: event.project, status: event.status,
+                terminal: target.terminal ?? event.terminal, tty: target.tty,
+                title: event.title, zellijSession: target.session, zellijPaneID: target.paneID,
+                zellijThreadID: target.thread,
+                timestamp: event.timestamp
+            ))
         }
-        return .emit(AgentEvent(
-            agentID: event.agentID, project: event.project, status: event.status,
-            terminal: target.terminal ?? event.terminal, tty: target.tty,
-            title: event.title, zellijSession: target.session, zellijPaneID: target.paneID,
-            zellijThreadID: target.thread,
-            timestamp: event.timestamp
-        ))
+        if let paneID = input.environment["HERDR_PANE_ID"], !paneID.isEmpty {
+            return .emit(AgentEvent(
+                agentID: event.agentID, project: event.project, status: event.status,
+                terminal: event.terminal, tty: event.tty, title: event.title,
+                herdrPaneID: paneID, herdrSocketPath: input.environment["HERDR_SOCKET_PATH"],
+                timestamp: event.timestamp
+            ))
+        }
+        return action
     }
 
     private static func rawAction(for input: HookBridgeInput) -> HookBridgeAction {
