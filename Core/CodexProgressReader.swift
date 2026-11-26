@@ -74,7 +74,6 @@ public struct CodexProgressReader: Sendable {
             guard let item = record(line), item["type"] as? String == "response_item",
                   let message = item["payload"] as? [String: Any],
                   message["type"] as? String == "message", message["role"] as? String == "assistant",
-                  let phase = message["phase"] as? String, ["commentary", "final_answer"].contains(phase),
                   let rawTimestamp = item["timestamp"] as? String,
                   let timestamp = timestampFormat.date(from: rawTimestamp) ?? wholeSeconds.date(from: rawTimestamp),
                   timestamp >= cutoff, timestamp <= now,

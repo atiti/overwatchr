@@ -5,11 +5,14 @@ import XCTest
 final class CodexProgressReaderTests: XCTestCase {
     private let now = ISO8601DateFormatter().date(from: "2026-11-26T10:01:00Z")!
 
-    func testShowsLatestCommentaryOrFinalAnswerFromMainSessions() throws {
+    func testShowsLatestAssistantMessageFromMainSessions() throws {
         try withSessionDirectory { directory in
             try writeRollout("main", source: "vscode", threadSource: "user", lines: [
                 message("Older update", time: "2026-11-26T10:00:45.000Z"),
                 message("  Build passed.\nChecking the release. ", time: "2026-11-26T10:00:55.100Z"),
+            ], in: directory)
+            try writeRollout("untagged", source: "vscode", lines: [
+                message("Model without a phase tag", phase: nil, time: "2026-11-26T10:00:57Z")
             ], in: directory)
             try writeRollout("finished", source: "vscode", lines: [
                 message("Working", time: "2026-11-26T10:00:50Z"),
@@ -27,10 +30,10 @@ final class CodexProgressReaderTests: XCTestCase {
 
             let updates = CodexProgressReader(sessionsDirectory: directory)
                 .latestUpdates(since: now.addingTimeInterval(-30), now: now)
-            XCTAssertEqual(updates.map(\.sessionID), ["main", "finished"])
+            XCTAssertEqual(updates.map(\.sessionID), ["main", "finished", "untagged"])
             XCTAssertEqual(updates.first?.project, "overwatchr")
             XCTAssertEqual(updates.first?.message, "Build passed. Checking the release.")
-            XCTAssertEqual(updates.last?.message, "All done: PR merged.")
+            XCTAssertEqual(updates.map(\.message).suffix(2), ["All done: PR merged.", "Model without a phase tag"])
         }
     }
 
@@ -78,16 +81,13 @@ final class CodexProgressReaderTests: XCTestCase {
         try FileManager.default.setAttributes([.modificationDate: now], ofItemAtPath: url.path)
     }
 
-    private func message(_ text: String, phase: String = "commentary", time: String) -> [String: Any] {
-        [
-            "type": "response_item",
-            "timestamp": time,
-            "payload": [
-                "type": "message",
-                "role": "assistant",
-                "phase": phase,
-                "content": [["type": "output_text", "text": text]]
-            ]
+    private func message(_ text: String, phase: String? = "commentary", time: String) -> [String: Any] {
+        var payload: [String: Any] = [
+            "type": "message",
+            "role": "assistant",
+            "content": [["type": "output_text", "text": text]]
         ]
+        payload["phase"] = phase
+        return ["type": "response_item", "timestamp": time, "payload": payload]
     }
 }
