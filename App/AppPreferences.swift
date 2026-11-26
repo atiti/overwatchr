@@ -3,6 +3,7 @@ import Foundation
 import OverwatchrCore
 
 enum AppPreferenceKey {
+    static let agentProgressOverlayEnabled = "agentProgressOverlayEnabled"
     static let alertChimeEnabled = "alertChimeEnabled"
     static let jumpSoundEnabled = "jumpSoundEnabled"
     static let hotKeyConfiguration = "hotKeyConfiguration"
@@ -19,6 +20,11 @@ struct AppPreferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+    }
+
+    var agentProgressOverlayEnabled: Bool {
+        get { defaults.bool(forKey: AppPreferenceKey.agentProgressOverlayEnabled) }
+        set { defaults.set(newValue, forKey: AppPreferenceKey.agentProgressOverlayEnabled) }
     }
 
     var alertChimeEnabled: Bool {
