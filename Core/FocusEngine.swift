@@ -57,6 +57,16 @@ public final class FocusEngine {
     }
 
     public func focus(event: AgentEvent) throws {
+        if event.zellijSession == nil, try HerdrFocus.focus(event: event) {
+            // Herdr drew the pane inside its own terminal window. Bring that
+            // terminal forward without searching its windows by project name.
+            try focus(
+                target: FocusTarget(terminalName: event.terminal ?? "ghostty", ttyPath: nil, titleSubstring: nil),
+                titleQueries: [], workingDirectoryQueries: []
+            )
+            return
+        }
+
         guard let terminal = event.terminal else {
             throw FocusError.missingTerminal
         }
@@ -70,16 +80,6 @@ public final class FocusEngine {
                                     titleSubstring: event.zellijSession),
                 titleQueries: [event.zellijSession].compactMap { $0 },
                 workingDirectoryQueries: []
-            )
-            return
-        }
-
-        if try HerdrFocus.focus(event: event) {
-            // Herdr drew the pane inside its own terminal window. Bring that
-            // terminal forward without searching its windows by project name.
-            try focus(
-                target: FocusTarget(terminalName: terminal, ttyPath: nil, titleSubstring: nil),
-                titleQueries: [], workingDirectoryQueries: []
             )
             return
         }

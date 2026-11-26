@@ -80,6 +80,15 @@ final class AppModel: ObservableObject {
         self.azureSpeechLanguage = preferences.azureSpeechLanguage
         self.voiceSubmitMode = preferences.voiceSubmitMode
         self.azureSpeechKeyConfigured = voiceKeychainStore.exists(account: azureSpeechKeyAccount)
+        self.progressOverlay.onJump = { [weak self] update in
+            guard let self else { return }
+            let agentID = "codex-\(update.sessionID)"
+            let queuedAlert = self.alerts.first { $0.agentID == agentID }
+            let event = queuedAlert ?? AgentEvent(agentID: agentID, project: update.project, status: .needsInput)
+            try self.focusEngine.focus(event: event)
+            if let queuedAlert { self.markSeen(queuedAlert) }
+            self.playJumpSoundIfEnabled()
+        }
         self.voiceController.onStateChange = { [weak self] state, message in
             self?.voiceState = state
             self?.voiceMessage = message
