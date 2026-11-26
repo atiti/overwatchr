@@ -74,6 +74,16 @@ public final class FocusEngine {
             return
         }
 
+        if try HerdrFocus.focus(event: event) {
+            // Herdr drew the pane inside its own terminal window. Bring that
+            // terminal forward without searching its windows by project name.
+            try focus(
+                target: FocusTarget(terminalName: terminal, ttyPath: nil, titleSubstring: nil),
+                titleQueries: [], workingDirectoryQueries: []
+            )
+            return
+        }
+
         let workingDirectoryQueries = [event.project, event.title]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
